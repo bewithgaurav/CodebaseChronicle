@@ -121,36 +121,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { id } = req.query;
+    const { id, url } = req.query;
 
     if (!id || typeof id !== 'string') {
       return res.status(400).json({ message: 'Repository ID is required' });
     }
 
-    // For now, we'll extract repo info from a test URL since we don't have persistent storage
-    // In a real app, you'd retrieve this from your database
-    const testUrl = 'https://github.com/facebook/react'; // Default for testing
-    const match = testUrl.match(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/?(?:\.git)?$/);
+    // Get repository URL from query param or use default for testing
+    let repositoryUrl = typeof url === 'string' ? decodeURIComponent(url) : 'https://github.com/facebook/react';
     
+    // Validate and parse GitHub URL
+    const match = repositoryUrl.match(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/?(?:\.git)?$/);
     if (!match) {
-      return res.status(400).json({ message: 'Invalid repository format' });
+      return res.status(400).json({ message: 'Invalid GitHub URL format' });
     }
 
     const [, owner, repo] = match;
+    const cleanRepo = repo.replace(/\.git$/, '');
+
+    console.log(`Fetching commits for ${owner}/${cleanRepo}`);
 
     // Fetch repository info
-    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}`);
     if (!repoResponse.ok) {
-      throw new Error(`GitHub API error: ${repoResponse.status}`);
+      throw new Error(`GitHub API error: ${repoResponse.status} - ${repoResponse.statusText}`);
     }
     const repoData: Repository = await repoResponse.json();
 
     // Fetch commits with stats
     const commitsResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/commits?per_page=50`
+      `https://api.github.com/repos/${owner}/${cleanRepo}/commits?per_page=50`
     );
     if (!commitsResponse.ok) {
-      throw new Error(`GitHub API error: ${commitsResponse.status}`);
+      throw new Error(`GitHub API error: ${commitsResponse.status} - ${commitsResponse.statusText}`);
     }
     const commitsData: GitHubCommit[] = await commitsResponse.json();
 

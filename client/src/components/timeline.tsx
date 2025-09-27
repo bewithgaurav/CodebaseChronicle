@@ -159,17 +159,23 @@ export default function Timeline({ repositoryId, onEventSelect, selectedEvent }:
   });
 
   const { data: repositoryData, isLoading, isError } = useQuery<RepositoryData>({
-    queryKey: ["/api/repositories", repositoryId, "commits"],
+    queryKey: ["/api/repositories", repositoryId, "commits", repository?.url],
     queryFn: async () => {
       if (!repositoryId) throw new Error('Repository ID is required');
       
-      const response = await fetch(`/api/repositories/${repositoryId}/commits`);
+      // Build the URL with repository URL as query parameter if available
+      let url = `/api/repositories/${repositoryId}/commits`;
+      if (repository?.url) {
+        url += `?url=${encodeURIComponent(repository.url)}`;
+      }
+      
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch commits');
       }
       return response.json();
     },
-    enabled: !!repositoryId,
+    enabled: !!repositoryId && !!repository,
     refetchInterval: false
   });
 
