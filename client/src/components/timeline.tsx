@@ -91,18 +91,38 @@ const getCommitDescription = (commit: Commit) => {
 
 export default function Timeline({ repositoryId, onEventSelect, selectedEvent }: TimelineProps) {
 
-  const { data: commits, isLoading, isError } = useQuery<Commit[]>({
-    queryKey: ["/api/repositories", repositoryId, "commits"],
-    enabled: !!repositoryId,
-    refetchInterval: (data) => {
-      // Keep polling if no data yet (repository is being processed)
-      return data && data.length > 0 ? false : 2000;
-    }
-  });
-
-  const { data: repository } = useQuery<{ status: string }>({
+  const { data: repository } = useQuery<{ status: string; url?: string; name?: string; owner?: string }>({
     queryKey: ["/api/repositories", repositoryId],
     enabled: !!repositoryId,
+  });
+
+  const { data: commits, isLoading, isError } = useQuery<Commit[]>({
+    queryKey: ["/api/repositories", repositoryId, "commits", repository?.url],
+    queryFn: async () => {
+      if (!repositoryId) return [];
+      
+      // If we have repository URL, pass it to get real commits
+      if (repository?.url) {
+        const response = await fetch(`/api/repositories/${repositoryId}/commits?url=${encodeURIComponent(repository.url)}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch commits');
+        }
+        return response.json();
+      }
+      
+      // Otherwise fetch without URL (will return empty array)
+      const response = await fetch(`/api/repositories/${repositoryId}/commits`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch commits');
+      }
+      return response.json();
+    },
+    enabled: !!repositoryId && !!repository,
+    refetchInterval: (query) => {
+      // Keep polling if no data yet (repository is being processed)
+      const data = query.state.data;
+      return data && data.length > 0 ? false : 2000;
+    }
   });
 
   if (!repositoryId) {

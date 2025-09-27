@@ -1,7 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// Import the storage from the analyze function
+// Note: This is a limitation of serverless functions - shared state doesn't persist
+// Each function invocation starts fresh, so we'll need to return basic info
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -21,13 +23,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ message: 'Invalid repository ID' });
     }
 
-    // Mock repository data
+    // Since serverless functions don't share state, we'll return a completed status
+    // The frontend will know to fetch commits immediately
     const repository = {
       id: id,
-      url: 'https://github.com/facebook/react',
-      name: 'react',
-      owner: 'facebook',
-      status: 'completed',
+      url: 'https://github.com/repository/url', // This would be from storage in a real app
+      name: 'repository',
+      owner: 'owner',
+      status: 'completed', // Always return completed so frontend fetches commits
       createdAt: new Date()
     };
     
