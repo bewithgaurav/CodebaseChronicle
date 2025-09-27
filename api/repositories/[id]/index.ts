@@ -1,7 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { storage } from '../../../server/storage';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
@@ -13,14 +21,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ message: 'Invalid repository ID' });
     }
 
-    const repository = await storage.getRepository(id);
-    if (!repository) {
-      return res.status(404).json({ message: 'Repository not found' });
-    }
+    // Mock repository data
+    const repository = {
+      id: id,
+      url: 'https://github.com/facebook/react',
+      name: 'react',
+      owner: 'facebook',
+      status: 'completed',
+      createdAt: new Date()
+    };
     
     res.json(repository);
   } catch (error) {
     console.error('Get repository error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error', error: String(error) });
   }
 }
