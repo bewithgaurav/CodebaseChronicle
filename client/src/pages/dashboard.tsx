@@ -4,17 +4,62 @@ import Navbar from "@/components/navbar";
 import Sidebar from "@/components/sidebar";
 import Timeline from "@/components/timeline";
 import EventDetails from "@/components/event-details";
-import { type Commit, type Repository } from "@shared/schema";
+
+interface Author {
+  name: string;
+  email: string;
+  avatar: string;
+  username: string;
+}
+
+interface CommitStats {
+  additions: number;
+  deletions: number;
+  total: number;
+}
+
+interface Commit {
+  id: string;
+  hash: string;
+  message: string;
+  author: Author;
+  date: string;
+  url: string;
+  type: 'feature' | 'bugfix' | 'docs' | 'refactor' | 'test' | 'config' | 'initial';
+  category: string;
+  importance: 'high' | 'medium' | 'low';
+  tags: string[];
+  stats: CommitStats;
+}
+
+interface RepositoryData {
+  repository: {
+    id: string;
+    name: string;
+    fullName: string;
+    description: string;
+    language: string;
+    stars: number;
+    forks: number;
+    createdAt: string;
+  };
+  commits: Commit[];
+  insights: any;
+  onboarding: any;
+}
 
 export default function Dashboard() {
   const [selectedEvent, setSelectedEvent] = useState<Commit | null>(null);
   const [repositoryId, setRepositoryId] = useState<string | null>(null);
+  const [repositoryData, setRepositoryData] = useState<RepositoryData | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<'timeline' | 'ownership' | 'complexity'>('timeline');
 
-  const { data: repository } = useQuery<Repository>({
-    queryKey: ["/api/repositories", repositoryId],
-    enabled: !!repositoryId,
-  });
+  const handleEventSelect = (event: Commit | null, data?: RepositoryData) => {
+    setSelectedEvent(event);
+    if (data) {
+      setRepositoryData(data);
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen">
@@ -32,15 +77,14 @@ export default function Dashboard() {
             <>
               <Timeline 
                 repositoryId={repositoryId}
-                onEventSelect={setSelectedEvent}
+                onEventSelect={handleEventSelect}
                 selectedEvent={selectedEvent}
               />
               
               <div className="flex-1 p-6">
                 <EventDetails 
                   selectedEvent={selectedEvent} 
-                  repositoryOwner={repository?.owner}
-                  repositoryName={repository?.name}
+                  repositoryData={repositoryData}
                 />
               </div>
             </>
