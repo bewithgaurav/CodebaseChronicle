@@ -58,3 +58,4 @@ temp/
 
 # Migrations (since we're using in-memory)
 migrations/
+.vercel
