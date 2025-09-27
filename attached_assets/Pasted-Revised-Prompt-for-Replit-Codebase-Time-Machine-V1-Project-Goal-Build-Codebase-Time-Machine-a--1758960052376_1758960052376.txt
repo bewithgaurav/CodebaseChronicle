@@ -1,0 +1,133 @@
+Revised Prompt for Replit – Codebase Time Machine (V1)
+
+Project Goal
+Build Codebase Time Machine, a web app where a new engineer can input a public GitHub repo URL and visually explore how the codebase evolved over time.
+
+The goal is to help someone new to a team understand:
+
+Feature Evolution – See when major features were added or removed.
+
+Bug Fixes & Minor Changes – Track maintenance activity and stability.
+
+Refactors & Architectural Shifts – Understand big structural changes.
+
+Code Ownership & Complexity – Identify hotspots and key contributors.
+
+Input Example Repos
+
+Use these for testing and demos:
+
+SaaS App: Django-CRM
+
+Python Library: TestZeus Hercules
+
+Core V1 Features
+
+Repo Clone & Git History Parsing
+
+Input: GitHub URL
+
+Clone repo and analyze full commit history.
+
+Extract: commit message, author, date, files changed, diff summary.
+
+Categorization of Changes
+
+Categorize each commit into 5 event types based on commit message + diff:
+
+🚀 Major Feature Launch
+
+✏️ Minor Feature / Enhancement
+
+🐞 Bug Fix
+
+🔧 Refactor
+
+🏗 Major Architectural Change
+
+Use simple keyword matching for V1 (e.g., "fix", "refactor", "rewrite", "migrate").
+
+Group related commits into releases or feature clusters.
+
+Interactive Timeline
+
+Horizontal timeline showing chronological evolution of the project.
+
+Each dot/node represents an event cluster, color-coded by event type.
+
+Clicking a node opens a side panel or modal with:
+
+Description of the event
+
+Date & author
+
+List of impacted files
+
+Link to GitHub diff
+
+Code Ownership Dashboard
+
+Separate tab showing:
+
+Most frequently changed files (hotspots)
+
+Top contributors for each file/module
+
+Complexity trend (based on churn and file size)
+
+User Workflow (New Engineer)
+
+User enters the GitHub URL.
+
+System clones repo and processes the timeline automatically.
+
+Timeline displays:
+
+Major milestones like first commit, big feature launches, rewrites.
+
+Minor events appear as smaller dots grouped under the nearest milestone.
+
+Clicking on a milestone reveals a detail view to understand what happened.
+
+Frontend UX Instructions
+
+We want the app to look professional and clear for engineers.
+Provide Replit with one of these layout options:
+
+Option 1 – Modern SaaS Dashboard Style (Most Polished)
+
+Layout:
+
+Top navbar with project name and repo link.
+
+Left sidebar:
+
+Tabs: Timeline, Ownership, Complexity Trends.
+
+Main content area:
+
+Horizontal interactive timeline across the top half.
+
+Bottom half shows details of selected event.
+
+Styling:
+
+TailwindCSS + soft pastel color palette.
+
+Event type colors:
+
+🚀 Major Feature: Blue
+
+✏️ Minor Feature: Teal
+
+🐞 Bug Fix: Red
+
+🔧 Refactor: Orange
+
+🏗 Architectural: Purple
+
+Interactions:
+
+Hover tooltip shows quick summary of event.
+
+Clicking opens side panel with commit details.
