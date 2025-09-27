@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { BarChart3, Users, Layers3 } from "lucide-react";
+import { BarChart3, Users, Layers3, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,8 +9,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { analyzeRepositorySchema, type Repository } from "@shared/schema";
 
 interface SidebarProps {
-  activeTab: 'timeline' | 'ownership' | 'complexity';
-  setActiveTab: (tab: 'timeline' | 'ownership' | 'complexity') => void;
+  activeTab: 'timeline' | 'multi-lane' | 'ownership' | 'complexity';
+  setActiveTab: (tab: 'timeline' | 'multi-lane' | 'ownership' | 'complexity') => void;
   onRepositoryAnalyzed: (repositoryId: string) => void;
 }
 
@@ -50,10 +50,10 @@ export default function Sidebar({ activeTab, setActiveTab, onRepositoryAnalyzed 
 
   const navItems = [
     {
-      id: 'timeline' as const,
-      label: 'Timeline',
-      icon: BarChart3,
-      description: 'Repository evolution over time'
+      id: 'multi-lane' as const,
+      label: 'Multi-Lane View',
+      icon: GitBranch,
+      description: 'Organized timeline by change type'
     },
     {
       id: 'ownership' as const,

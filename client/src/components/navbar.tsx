@@ -17,7 +17,7 @@ export default function Navbar({ repositoryId }: NavbarProps) {
     <nav className="bg-card border-b border-border px-6 py-3 flex items-center justify-between shadow-sm">
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-2">
-          <Clock className="w-8 h-8 text-primary" data-testid="logo-clock" />
+          <span className="text-2xl">🌳</span>
           <h1 className="text-xl font-semibold text-foreground" data-testid="app-title">
             Codebase Time Machine
           </h1>

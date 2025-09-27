@@ -4,49 +4,66 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(210, 40%, 98%);
-  --foreground: hsl(222.2, 84%, 4.9%);
-  --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(222.2, 84%, 4.9%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(222.2, 84%, 4.9%);
-  --primary: hsl(217.2, 91.2%, 59.8%);
-  --primary-foreground: hsl(210, 40%, 98%);
-  --secondary: hsl(210, 40%, 96%);
-  --secondary-foreground: hsl(222.2, 84%, 4.9%);
-  --muted: hsl(210, 40%, 96%);
-  --muted-foreground: hsl(215.4, 16.3%, 46.9%);
-  --accent: hsl(210, 40%, 96%);
-  --accent-foreground: hsl(222.2, 84%, 4.9%);
-  --destructive: hsl(0, 84.2%, 60.2%);
-  --destructive-foreground: hsl(210, 40%, 98%);
-  --border: hsl(214.3, 31.8%, 91.4%);
-  --input: hsl(214.3, 31.8%, 91.4%);
-  --ring: hsl(217.2, 91.2%, 59.8%);
-  --chart-1: hsl(217.2, 91.2%, 59.8%);
-  --chart-2: hsl(172, 76%, 40%);
-  --chart-3: hsl(25, 95%, 53%);
-  --chart-4: hsl(147.1429, 78.5047%, 41.9608%);
-  --chart-5: hsl(262, 83%, 58%);
-  --sidebar: hsl(0, 0%, 100%);
-  --sidebar-foreground: hsl(222.2, 84%, 4.9%);
-  --sidebar-primary: hsl(217.2, 91.2%, 59.8%);
-  --sidebar-primary-foreground: hsl(210, 40%, 98%);
-  --sidebar-accent: hsl(210, 40%, 96%);
-  --sidebar-accent-foreground: hsl(222.2, 84%, 4.9%);
-  --sidebar-border: hsl(214.3, 31.8%, 91.4%);
-  --sidebar-ring: hsl(217.2, 91.2%, 59.8%);
+  /* Earthy, Natural Theme */
+  --forest-green: #2d5016;
+  --sage-green: #87a96b;
+  --warm-beige: #f5f1e8;
+  --clay-brown: #8b4513;
+  --stone-gray: #6b7280;
+  --bark-brown: #3e2723;
+  --moss-green: #4a5d23;
+  --sand-beige: #f4f1e8;
+  --earth-orange: #d2691e;
+  --river-blue: #4682b4;
+  
+  /* Semantic colors using earth tones */
+  --background: var(--warm-beige);
+  --foreground: var(--bark-brown);
+  --card: #ffffff;
+  --card-foreground: var(--bark-brown);
+  --popover: #ffffff;
+  --popover-foreground: var(--bark-brown);
+  --primary: var(--forest-green);
+  --primary-foreground: #ffffff;
+  --secondary: var(--sage-green);
+  --secondary-foreground: #ffffff;
+  --muted: #f8f6f0;
+  --muted-foreground: var(--stone-gray);
+  --accent: var(--earth-orange);
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e5e1d8;
+  --input: #e5e1d8;
+  --ring: var(--forest-green);
+  
+  /* Lane-specific colors */
+  --feature-lane: #e8f5e8;
+  --bug-lane: #fdf2f2;
+  --refactor-lane: #f0f9ff;
+  --architecture-lane: #faf5ff;
+  
+  /* Sidebar colors */
+  --sidebar: #ffffff;
+  --sidebar-foreground: var(--bark-brown);
+  --sidebar-primary: var(--forest-green);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f8f6f0;
+  --sidebar-accent-foreground: var(--bark-brown);
+  --sidebar-border: #e5e1d8;
+  --sidebar-ring: var(--forest-green);
+  
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-  --radius: 0.5rem;
+  --radius: 0.75rem;
   
-  /* Event type colors */
-  --major-feature: hsl(217, 91%, 60%);
-  --minor-feature: hsl(172, 76%, 40%);
-  --bug-fix: hsl(0, 84%, 60%);
-  --refactor: hsl(25, 95%, 53%);
-  --architecture: hsl(262, 83%, 58%);
+  /* Event type colors - earthy tones */
+  --major-feature: var(--sage-green);
+  --minor-feature: var(--moss-green);
+  --bug-fix: var(--earth-orange);
+  --refactor: var(--river-blue);
+  --architecture: var(--clay-brown);
 }
 
 .dark {
@@ -90,26 +107,160 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-serif antialiased bg-background text-foreground;
+    line-height: 1.6;
   }
 }
 
-.timeline-container {
-  min-height: 300px;
+/* Multi-lane timeline styles */
+.lanes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
 }
 
-.timeline-dot {
-  transition: all 0.2s ease;
+.lane {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.lane:hover {
+  transform: translateY(-2px);
+}
+
+.lane-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lane-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.lane-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: white;
+}
+
+.lane-count {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+/* Lane-specific styling */
+.lane.features {
+  background: var(--feature-lane);
+}
+
+.lane.features .lane-icon {
+  background: var(--sage-green);
+}
+
+.lane.bugs {
+  background: var(--bug-lane);
+}
+
+.lane.bugs .lane-icon {
+  background: var(--earth-orange);
+}
+
+.lane.refactors {
+  background: var(--refactor-lane);
+}
+
+.lane.refactors .lane-icon {
+  background: var(--river-blue);
+}
+
+.lane.architecture {
+  background: var(--architecture-lane);
+}
+
+.lane.architecture .lane-icon {
+  background: var(--clay-brown);
+}
+
+/* Timeline within each lane */
+.lane-timeline {
+  padding: 1rem 1.5rem;
+  position: relative;
+  min-height: 120px;
+}
+
+.timeline-line {
+  position: absolute;
+  top: 50%;
+  left: 1.5rem;
+  right: 1.5rem;
+  height: 2px;
+  background: var(--border);
+  transform: translateY(-50%);
+}
+
+.timeline-events {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  z-index: 1;
+}
+
+.timeline-event {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 3px solid var(--primary);
   cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
-.timeline-dot:hover {
-  transform: scale(1.2);
+.timeline-event:hover {
+  transform: scale(1.3);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.2);
+}
+
+.timeline-event.selected {
+  transform: scale(1.4);
+  border-width: 4px;
+}
+
+.timeline-event-date {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
 }
 
 .tooltip {
   position: absolute;
-  background: hsl(222.2, 84%, 4.9%);
+  background: var(--bark-brown);
   color: white;
   padding: 8px 12px;
   border-radius: 6px;
@@ -125,12 +276,12 @@
 }
 
 .sidebar-link:hover {
-  background-color: var(--accent);
+  background-color: var(--sidebar-accent);
 }
 
 .sidebar-link.active {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
+  background-color: var(--sidebar-primary);
+  color: var(--sidebar-primary-foreground);
 }
 
 .event-card {
@@ -138,5 +289,72 @@
 }
 
 .event-card:hover {
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 25px -5px rgba(139, 69, 19, 0.1);
+}
+
+/* Additional earthy theme enhancements */
+.lanes-container .lane:nth-child(1) {
+  border-left: 4px solid var(--sage-green);
+}
+
+.lanes-container .lane:nth-child(2) {
+  border-left: 4px solid var(--earth-orange);
+}
+
+.lanes-container .lane:nth-child(3) {
+  border-left: 4px solid var(--river-blue);
+}
+
+.lanes-container .lane:nth-child(4) {
+  border-left: 4px solid var(--clay-brown);
+}
+
+/* Enhanced hover effects */
+.timeline-event:hover::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border-radius: 50%;
+  background: rgba(139, 69, 19, 0.1);
+  z-index: -1;
+}
+
+/* Smooth transitions for natural feel */
+* {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+/* Natural shadows */
+.lane {
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.08), 0 2px 4px rgba(139, 69, 19, 0.04);
+}
+
+.lane:hover {
+  box-shadow: 0 8px 24px rgba(139, 69, 19, 0.12), 0 4px 8px rgba(139, 69, 19, 0.06);
+}
+
+/* Typography improvements for earthy feel */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--primary);
+}
+
+/* Responsive improvements */
+@media (max-width: 1024px) {
+  .lanes-container {
+    padding: 0.5rem;
+    gap: 0.75rem;
+  }
+  
+  .lane-timeline {
+    min-height: 80px;
+    padding: 0.75rem 1rem;
+  }
+  
+  .timeline-event {
+    width: 12px;
+    height: 12px;
+  }
 }

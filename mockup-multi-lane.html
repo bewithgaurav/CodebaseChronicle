@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Lane Codebase Time Machine - Mockup</title>
+    <style>
+        /* Earthy, Natural Theme */
+        :root {
+            /* Earth tones - warm, natural colors */
+            --forest-green: #2d5016;
+            --sage-green: #87a96b;
+            --warm-beige: #f5f1e8;
+            --clay-brown: #8b4513;
+            --stone-gray: #6b7280;
+            --bark-brown: #3e2723;
+            --moss-green: #4a5d23;
+            --sand-beige: #f4f1e8;
+            --earth-orange: #d2691e;
+            --river-blue: #4682b4;
+            
+            /* Semantic colors using earth tones */
+            --background: var(--warm-beige);
+            --surface: #ffffff;
+            --surface-variant: #f8f6f0;
+            --primary: var(--forest-green);
+            --primary-variant: var(--moss-green);
+            --secondary: var(--sage-green);
+            --accent: var(--earth-orange);
+            --text-primary: var(--bark-brown);
+            --text-secondary: var(--stone-gray);
+            --border: #e5e1d8;
+            --shadow: rgba(139, 69, 19, 0.1);
+            
+            /* Lane-specific colors */
+            --feature-lane: #e8f5e8;
+            --bug-lane: #fdf2f2;
+            --refactor-lane: #f0f9ff;
+            --architecture-lane: #faf5ff;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: var(--surface);
+            border-bottom: 2px solid var(--border);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+        
+        .header h1 {
+            color: var(--primary);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+        
+        /* Main content area */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--surface);
+            border-right: 2px solid var(--border);
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+        
+        .sidebar h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .repo-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface-variant);
+            color: var(--text-primary);
+            font-family: inherit;
+            margin-bottom: 1rem;
+        }
+        
+        .analyze-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .analyze-btn:hover {
+            background: var(--primary-variant);
+        }
+        
+        /* Multi-lane container */
+        .lanes-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .lanes-header {
+            background: var(--surface);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .lanes-header h2 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .lanes-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .time-range {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .zoom-controls {
+            display: flex;
+            gap: 0.25rem;
+        }
+        
+        .zoom-btn {
+            padding: 0.25rem 0.5rem;
+            background: var(--surface-variant);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        /* Lanes area */
+        .lanes-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 1rem;
+            gap: 1rem;
+        }
+        
+        /* Individual lane */
+        .lane {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px var(--shadow);
+            transition: transform 0.2s ease;
+        }
+        
+        .lane:hover {
+            transform: translateY(-2px);
+        }
+        
+        .lane-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .lane-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .lane-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+        
+        .lane-count {
+            background: var(--surface-variant);
+            color: var(--text-secondary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        
+        /* Lane-specific styling */
+        .lane.features {
+            background: var(--feature-lane);
+        }
+        
+        .lane.features .lane-icon {
+            background: var(--sage-green);
+            color: white;
+        }
+        
+        .lane.bugs {
+            background: var(--bug-lane);
+        }
+        
+        .lane.bugs .lane-icon {
+            background: var(--earth-orange);
+            color: white;
+        }
+        
+        .lane.refactors {
+            background: var(--refactor-lane);
+        }
+        
+        .lane.refactors .lane-icon {
+            background: var(--river-blue);
+            color: white;
+        }
+        
+        .lane.architecture {
+            background: var(--architecture-lane);
+        }
+        
+        .lane.architecture .lane-icon {
+            background: var(--clay-brown);
+            color: white;
+        }
+        
+        /* Timeline within each lane */
+        .lane-timeline {
+            padding: 1rem 1.5rem;
+            position: relative;
+            min-height: 120px;
+        }
+        
+        .timeline-line {
+            position: absolute;
+            top: 50%;
+            left: 1.5rem;
+            right: 1.5rem;
+            height: 2px;
+            background: var(--border);
+            transform: translateY(-50%);
+        }
+        
+        .timeline-events {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .timeline-event {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 3px solid var(--primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .timeline-event:hover {
+            transform: scale(1.3);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+        
+        .timeline-event.selected {
+            transform: scale(1.4);
+            border-width: 4px;
+        }
+        
+        .timeline-event::after {
+            content: attr(data-date);
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        
+        /* Details panel */
+        .details-panel {
+            width: 400px;
+            background: var(--surface);
+            border-left: 2px solid var(--border);
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        
+        .details-panel h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .commit-info {
+            background: var(--surface-variant);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .commit-message {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        
+        .commit-meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .file-changes {
+            margin-top: 1rem;
+        }
+        
+        .file-changes h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .file-list {
+            list-style: none;
+        }
+        
+        .file-list li {
+            padding: 0.5rem;
+            background: var(--surface);
+            margin-bottom: 0.25rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Responsive design */
+        @media (max-width: 1200px) {
+            .details-panel {
+                width: 300px;
+            }
+        }
+        
+        @media (max-width: 900px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 2px solid var(--border);
+            }
+            
+            .details-panel {
+                width: 100%;
+                border-left: none;
+                border-top: 2px solid var(--border);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🌳 Codebase Time Machine</h1>
+            <p>Explore your repository's evolution through natural, organized lanes</p>
+        </header>
+        
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <h3>Repository Analysis</h3>
+                <input type="text" class="repo-input" placeholder="https://github.com/user/repo" value="https://github.com/example/project">
+                <button class="analyze-btn">🔍 Analyze Repository</button>
+                
+                <div style="margin-top: 2rem;">
+                    <h3>Filters</h3>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">Time Range</label>
+                        <select style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-variant);">
+                            <option>Last 6 months</option>
+                            <option>Last year</option>
+                            <option>All time</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">Author</label>
+                        <select style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-variant);">
+                            <option>All authors</option>
+                            <option>john.doe</option>
+                            <option>jane.smith</option>
+                        </select>
+                    </div>
+                </div>
+            </aside>
+            
+            <!-- Multi-lane view -->
+            <div class="lanes-container">
+                <div class="lanes-header">
+                    <h2>Repository Timeline - Multi-Lane View</h2>
+                    <div class="lanes-controls">
+                        <div class="time-range">
+                            <span>📅 Jan 2024 - Dec 2024</span>
+                        </div>
+                        <div class="zoom-controls">
+                            <button class="zoom-btn">-</button>
+                            <button class="zoom-btn">+</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="lanes-area">
+                    <!-- Features Lane -->
+                    <div class="lane features">
+                        <div class="lane-header">
+                            <div class="lane-title">
+                                <div class="lane-icon">🚀</div>
+                                <span>Features</span>
+                            </div>
+                            <div class="lane-count">12 commits</div>
+                        </div>
+                        <div class="lane-timeline">
+                            <div class="timeline-line"></div>
+                            <div class="timeline-events">
+                                <div class="timeline-event" data-date="Jan 15"></div>
+                                <div class="timeline-event" data-date="Mar 22"></div>
+                                <div class="timeline-event selected" data-date="Jun 10"></div>
+                                <div class="timeline-event" data-date="Sep 05"></div>
+                                <div class="timeline-event" data-date="Nov 18"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bug Fixes Lane -->
+                    <div class="lane bugs">
+                        <div class="lane-header">
+                            <div class="lane-title">
+                                <div class="lane-icon">🐞</div>
+                                <span>Bug Fixes</span>
+                            </div>
+                            <div class="lane-count">8 commits</div>
+                        </div>
+                        <div class="lane-timeline">
+                            <div class="timeline-line"></div>
+                            <div class="timeline-events">
+                                <div class="timeline-event" data-date="Feb 03"></div>
+                                <div class="timeline-event" data-date="Apr 12"></div>
+                                <div class="timeline-event" data-date="Jul 28"></div>
+                                <div class="timeline-event" data-date="Oct 15"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Refactoring Lane -->
+                    <div class="lane refactors">
+                        <div class="lane-header">
+                            <div class="lane-title">
+                                <div class="lane-icon">🔧</div>
+                                <span>Refactoring</span>
+                            </div>
+                            <div class="lane-count">6 commits</div>
+                        </div>
+                        <div class="lane-timeline">
+                            <div class="timeline-line"></div>
+                            <div class="timeline-events">
+                                <div class="timeline-event" data-date="Jan 28"></div>
+                                <div class="timeline-event" data-date="May 14"></div>
+                                <div class="timeline-event" data-date="Aug 20"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Architecture Lane -->
+                    <div class="lane architecture">
+                        <div class="lane-header">
+                            <div class="lane-title">
+                                <div class="lane-icon">🏗</div>
+                                <span>Architecture</span>
+                            </div>
+                            <div class="lane-count">4 commits</div>
+                        </div>
+                        <div class="lane-timeline">
+                            <div class="timeline-line"></div>
+                            <div class="timeline-events">
+                                <div class="timeline-event" data-date="Mar 08"></div>
+                                <div class="timeline-event" data-date="Aug 02"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Details Panel -->
+            <aside class="details-panel">
+                <h3>📋 Commit Details</h3>
+                
+                <div class="commit-info">
+                    <div class="commit-message">Add user authentication system</div>
+                    <div class="commit-meta">
+                        <div>👤 john.doe</div>
+                        <div>📅 June 10, 2024</div>
+                        <div>🏷️ Feature</div>
+                        <div>🔗 #abc123f</div>
+                    </div>
+                    
+                    <div class="file-changes">
+                        <h4>📁 Files Changed (7)</h4>
+                        <ul class="file-list">
+                            <li>+ src/auth/login.ts</li>
+                            <li>+ src/auth/register.ts</li>
+                            <li>~ src/components/navbar.tsx</li>
+                            <li>~ src/routes/index.ts</li>
+                            <li>+ tests/auth.test.ts</li>
+                            <li>~ package.json</li>
+                            <li>~ README.md</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div style="background: var(--surface-variant); padding: 1rem; border-radius: 8px;">
+                    <h4 style="color: var(--primary); margin-bottom: 0.5rem;">💡 Impact Analysis</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
+                        This commit introduces a complete authentication system with login and registration functionality. 
+                        It affects the main navigation and routing structure, adding security layers to the application.
+                    </p>
+                </div>
+            </aside>
+        </div>
+    </div>
+    
+    <script>
+        // Simple interactivity for the mockup
+        document.querySelectorAll('.timeline-event').forEach(event => {
+            event.addEventListener('click', function() {
+                // Remove selected class from all events
+                document.querySelectorAll('.timeline-event').forEach(e => e.classList.remove('selected'));
+                // Add selected class to clicked event
+                this.classList.add('selected');
+            });
+        });
+        
+        // Zoom controls
+        document.querySelectorAll('.zoom-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                console.log('Zoom:', this.textContent);
+            });
+        });
+    </script>
+</body>
+</html>
