@@ -114,6 +114,10 @@ const formatDate = (date: Date) => {
   }).format(date);
 };
 
+const getCommitTitle = (message: string) => {
+  return message.split('\n')[0];
+};
+
 const getCommitDescription = (commit: Commit) => {
   const changes = [];
   if (commit.stats.additions > 0) {
@@ -267,7 +271,7 @@ export default function Timeline({ repositoryId, onEventSelect, selectedEvent }:
         </div>
       </div>
 
-      <div className="timeline-container bg-background rounded-lg border border-border p-6 max-h-[600px] overflow-y-auto">
+      <div className="timeline-container bg-background rounded-lg border border-border p-6">
         <VerticalTimeline
           lineColor="var(--border)"
         >
@@ -302,12 +306,19 @@ export default function Timeline({ repositoryId, onEventSelect, selectedEvent }:
                   border: `2px solid ${config.color}`,
                 }}
                 icon={<IconComponent size={20} />}
-                onTimelineElementClick={() => onEventSelect(commit, repositoryData)}
+                onTimelineElementClick={() => {
+                  // Toggle selection: if already selected, unselect it
+                  if (selectedEvent?.id === commit.id) {
+                    onEventSelect(null);
+                  } else {
+                    onEventSelect(commit, repositoryData);
+                  }
+                }}
               >
                 <div className="timeline-content">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="vertical-timeline-element-title font-semibold text-base">
-                      {config.emoji} {commit.message}
+                      {config.emoji} {getCommitTitle(commit.message)}
                     </h3>
                     <div className="flex flex-col gap-1 items-end">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
@@ -325,12 +336,12 @@ export default function Timeline({ repositoryId, onEventSelect, selectedEvent }:
                     </div>
                   </div>
                   
-                  <div className="vertical-timeline-element-subtitle mb-3">
+                  <div className="vertical-timeline-element-subtitle">
                     {getCommitDescription(commit)}
                   </div>
                   
                   {isSelected && (
-                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="mt-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                       <p className="text-sm text-blue-800 dark:text-blue-200">
                         ✨ Selected - View onboarding insights in the panel below
                       </p>

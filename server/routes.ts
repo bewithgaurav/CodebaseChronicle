@@ -222,9 +222,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/repositories/:id/commits', async (req, res) => {
     try {
-      const commits = await storage.getRepositoryCommits(req.params.id);
-      res.json(commits);
+      // For development, we'll proxy to our GitHub API implementation
+      const { id } = req.params;
+      const { url } = req.query;
+      
+      if (!id) {
+        return res.status(400).json({ message: 'Repository ID is required' });
+      }
+
+      // Get repository to get URL if not provided
+      let repositoryUrl = url as string;
+      if (!repositoryUrl) {
+        const repository = await storage.getRepository(id);
+        if (!repository) {
+          return res.status(404).json({ message: 'Repository not found' });
+        }
+        repositoryUrl = repository.url;
+      }
+
+      if (!repositoryUrl) {
+        return res.status(400).json({ message: 'Repository URL not found' });
+      }
+
+      // Import and use the same logic as our serverless function
+      const { default: commitsHandler } = await import('../api/repositories/[id]/commits');
+      
+      // Create mock request/response objects
+      const mockReq = {
+        method: 'GET',
+        query: { id, url: repositoryUrl }
+      } as any;
+
+      const mockRes = {
+        setHeader: () => {},
+        status: (code: number) => ({
+          json: (data: any) => res.status(code).json(data),
+          end: () => res.status(code).end()
+        }),
+        json: (data: any) => res.json(data)
+      } as any;
+
+      await commitsHandler(mockReq, mockRes);
     } catch (error) {
+      console.error('Commits fetch error:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   });

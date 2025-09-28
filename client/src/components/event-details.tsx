@@ -107,6 +107,16 @@ export default function EventDetails({ selectedEvent, repositoryData }: EventDet
     }).format(new Date(date));
   };
 
+  const formatCommitMessage = (message: string) => {
+    const lines = message.split('\n');
+    const title = lines[0];
+    const description = lines.slice(1).join('\n').trim();
+    
+    return { title, description };
+  };
+
+  const { title: commitTitle, description: commitDescription } = formatCommitMessage(selectedEvent.message);
+
   return (
     <Card className="h-full">
       <CardContent className="pt-6">
@@ -115,9 +125,16 @@ export default function EventDetails({ selectedEvent, repositoryData }: EventDet
             <div className="flex items-center space-x-3 mb-2">
               <span className="text-xl">{config.emoji}</span>
               <h3 className="text-xl font-semibold text-foreground flex-1">
-                {selectedEvent.message}
+                {commitTitle}
               </h3>
             </div>
+            {commitDescription && (
+              <div className="ml-8 mb-3">
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {commitDescription}
+                </p>
+              </div>
+            )}
             <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
               <span>{formatDate(selectedEvent.date)}</span>
               <span>•</span>
@@ -165,23 +182,39 @@ export default function EventDetails({ selectedEvent, repositoryData }: EventDet
           </TabsList>
           
           <TabsContent value="commit" className="space-y-4">
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Changes Summary</h4>
-              <div className="flex items-center space-x-4 text-sm">
-                <div className="flex items-center space-x-1">
-                  <span className="text-green-600">+{selectedEvent.stats.additions}</span>
-                  <span className="text-muted-foreground">additions</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <span className="text-red-600">-{selectedEvent.stats.deletions}</span>
-                  <span className="text-muted-foreground">deletions</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <span className="text-blue-600">{selectedEvent.stats.total}</span>
-                  <span className="text-muted-foreground">total changes</span>
+            {(selectedEvent.stats.additions > 0 || selectedEvent.stats.deletions > 0 || selectedEvent.stats.total > 0) ? (
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Changes Summary</h4>
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className="flex items-center space-x-1">
+                    <span className="text-green-600">+{selectedEvent.stats.additions}</span>
+                    <span className="text-muted-foreground">additions</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-red-600">-{selectedEvent.stats.deletions}</span>
+                    <span className="text-muted-foreground">deletions</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-blue-600">{selectedEvent.stats.total}</span>
+                    <span className="text-muted-foreground">total changes</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Commit Info</h4>
+                <p className="text-sm text-muted-foreground">
+                  <a 
+                    href={selectedEvent.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-blue-600 hover:text-blue-800 underline"
+                  >
+                    View detailed changes on GitHub →
+                  </a>
+                </p>
+              </div>
+            )}
 
             <div>
               <h4 className="text-sm font-semibold mb-2">Commit Category</h4>

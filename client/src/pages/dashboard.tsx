@@ -75,17 +75,22 @@ export default function Dashboard() {
         <main className="flex-1 flex flex-col bg-background">
           {activeTab === 'timeline' && (
             <>
-              <Timeline 
-                repositoryId={repositoryId}
-                onEventSelect={handleEventSelect}
-                selectedEvent={selectedEvent}
-              />
-              
-              <div className="flex-1 p-6">
-                <EventDetails 
-                  selectedEvent={selectedEvent} 
-                  repositoryData={repositoryData}
+              <div className="flex-1 overflow-y-auto">
+                <Timeline 
+                  repositoryId={repositoryId}
+                  onEventSelect={handleEventSelect}
+                  selectedEvent={selectedEvent}
                 />
+              </div>
+              
+              <div className="h-96 border-t border-border bg-card overflow-y-auto">
+                <div className="p-6">
+                  <h2 className="text-lg font-semibold mb-4 text-foreground">📊 Event Details & Insights</h2>
+                  <EventDetails 
+                    selectedEvent={selectedEvent} 
+                    repositoryData={repositoryData}
+                  />
+                </div>
               </div>
             </>
           )}
