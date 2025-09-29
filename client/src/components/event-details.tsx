@@ -1,25 +1,93 @@
-import { Info, ExternalLink, FileText } from "lucide-react";
+import { Info, ExternalLink, FileText, Users, TrendingUp, BookOpen, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { type Commit } from "@shared/schema";
-import * as d3 from "d3";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+
+interface Author {
+  name: string;
+  email: string;
+  avatar: string;
+  username: string;
+}
+
+interface CommitStats {
+  additions: number;
+  deletions: number;
+  total: number;
+}
+
+interface CommitFile {
+  filename: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  changes: number;
+  patch?: string;
+}
+
+interface Commit {
+  id: string;
+  hash: string;
+  message: string;
+  author: Author;
+  date: string;
+  url: string;
+  type: 'feature' | 'bugfix' | 'docs' | 'refactor' | 'test' | 'config' | 'initial';
+  category: string;
+  importance: 'high' | 'medium' | 'low';
+  tags: string[];
+  stats: CommitStats;
+  files?: CommitFile[];
+}
+
+interface OnboardingTips {
+  projectStory: string;
+  expertContacts: Array<{
+    username: string;
+    expertise: string[];
+    commits: number;
+  }>;
+  focusAreas: Array<{
+    type: string;
+    count: number;
+    percentage: number;
+  }>;
+}
+
+interface RepositoryData {
+  repository: {
+    id: string;
+    name: string;
+    fullName: string;
+    description: string;
+    language: string;
+    stars: number;
+    forks: number;
+    createdAt: string;
+  };
+  commits: Commit[];
+  insights: any;
+  onboarding: OnboardingTips;
+}
 
 interface EventDetailsProps {
   selectedEvent: Commit | null;
-  repositoryOwner?: string;
-  repositoryName?: string;
+  repositoryData?: RepositoryData;
 }
 
 const eventTypeConfig = {
-  'major-feature': { color: 'var(--major-feature)', emoji: '🚀', label: 'Major Feature' },
-  'minor-feature': { color: 'var(--minor-feature)', emoji: '✏️', label: 'Minor Feature' },
-  'bug-fix': { color: 'var(--bug-fix)', emoji: '🐞', label: 'Bug Fix' },
-  'refactor': { color: 'var(--refactor)', emoji: '🔧', label: 'Refactor' },
-  'architecture': { color: 'var(--architecture)', emoji: '🏗', label: 'Architecture' },
+  'initial': { color: '#10b981', bgColor: '#d1fae5', emoji: '🎯', label: 'Initial Commit' },
+  'feature': { color: '#3b82f6', bgColor: '#dbeafe', emoji: '✨', label: 'New Feature' },
+  'bugfix': { color: '#ef4444', bgColor: '#fee2e2', emoji: '�', label: 'Bug Fix' },
+  'docs': { color: '#06b6d4', bgColor: '#cffafe', emoji: '📝', label: 'Documentation' },
+  'refactor': { color: '#f97316', bgColor: '#fed7aa', emoji: '♻️', label: 'Refactor' },
+  'test': { color: '#8b5cf6', bgColor: '#ede9fe', emoji: '🧪', label: 'Tests' },
+  'config': { color: '#6b7280', bgColor: '#f3f4f6', emoji: '⚙️', label: 'Configuration' },
 };
 
-export default function EventDetails({ selectedEvent, repositoryOwner, repositoryName }: EventDetailsProps) {
+export default function EventDetails({ selectedEvent, repositoryData }: EventDetailsProps) {
   if (!selectedEvent) {
     return (
       <Card className="h-full">
@@ -27,9 +95,9 @@ export default function EventDetails({ selectedEvent, repositoryOwner, repositor
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <div className="text-center">
               <Info className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">Select an event to view details</h3>
+              <h3 className="text-lg font-medium mb-2">Select a commit to view insights</h3>
               <p className="text-sm">
-                Click on any dot in the timeline above to see commit information, files changed, and links to GitHub
+                Click on any commit in the timeline to see detailed information and onboarding insights
               </p>
             </div>
           </div>
@@ -38,135 +106,423 @@ export default function EventDetails({ selectedEvent, repositoryOwner, repositor
     );
   }
 
-  const config = eventTypeConfig[selectedEvent.type as keyof typeof eventTypeConfig];
-  const githubUrl = repositoryOwner && repositoryName 
-    ? `https://github.com/${repositoryOwner}/${repositoryName}/commit/${selectedEvent.hash}`
-    : `https://github.com/commit/${selectedEvent.hash}`;
-  const files = Array.isArray(selectedEvent.filesChanged) ? selectedEvent.filesChanged as Array<{filename: string; insertions: number; deletions: number}> : [];
+  const config = eventTypeConfig[selectedEvent.type] || eventTypeConfig['feature'];
+  const formatDate = (date: string) => {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(date));
+  };
+
+  const formatCommitMessage = (message: string) => {
+    const lines = message.split('\n');
+    const title = lines[0];
+    const description = lines.slice(1).join('\n').trim();
+    
+    return { title, description };
+  };
+
+  const parseDiffLines = (patch: string): Array<{ type: 'context' | 'addition' | 'deletion', content: string, lineNumber?: number }> => {
+    if (!patch) return [];
+    
+    const lines = patch.split('\n');
+    const diffLines = [];
+    
+    for (const line of lines) {
+      if (line.startsWith('@@')) continue; // Skip hunk headers
+      if (line.startsWith('+++') || line.startsWith('---')) continue; // Skip file headers
+      
+      if (line.startsWith('+')) {
+        diffLines.push({ type: 'addition' as const, content: line });
+      } else if (line.startsWith('-')) {
+        diffLines.push({ type: 'deletion' as const, content: line });
+      } else if (line.startsWith(' ')) {
+        diffLines.push({ type: 'context' as const, content: line });
+      }
+    }
+    
+    return diffLines.slice(0, 20); // Limit to first 20 lines for display
+  };
+
+  const renderDiffPreview = (files: CommitFile[]) => {
+    console.log('renderDiffPreview called with files:', files);
+    
+    if (!files || files.length === 0) {
+      console.log('No files provided');
+      return null;
+    }
+    
+    const filesWithPatches = files.filter(f => f.patch && f.patch.trim() !== '');
+    console.log('Files with patches:', filesWithPatches.length, 'out of', files.length);
+    
+    if (filesWithPatches.length === 0) {
+      return (
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold">Code Changes Preview</h4>
+          <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+            No diff preview available. This may be a binary file change or the patch data is not accessible.
+            <br />
+            <a 
+              href={`https://github.com/commit/${files[0]?.filename}`} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              View full changes on GitHub →
+            </a>
+          </div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold">Code Changes Preview</h4>
+        {filesWithPatches.slice(0, 2).map((file) => {
+          const diffLines = parseDiffLines(file.patch || '');
+          if (diffLines.length === 0) return null;
+          
+          return (
+            <div key={file.filename} className="border rounded-md overflow-hidden">
+              <div className="bg-gray-50 dark:bg-gray-800 px-3 py-2 border-b">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-mono text-gray-700 dark:text-gray-300 truncate flex-1 mr-2">{file.filename}</span>
+                  <div className="flex items-center space-x-2 text-xs">
+                    {file.additions > 0 && (
+                      <span className="text-green-600 font-semibold">+{file.additions}</span>
+                    )}
+                    {file.deletions > 0 && (
+                      <span className="text-red-600 font-semibold">-{file.deletions}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="max-h-40 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                {diffLines.slice(0, 15).map((line, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`px-3 py-0.5 text-xs font-mono leading-relaxed border-l-2 ${
+                      line.type === 'addition' 
+                        ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-400' 
+                        : line.type === 'deletion' 
+                        ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border-red-400'
+                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300'
+                    }`}
+                  >
+                    {line.content}
+                  </div>
+                ))}
+                {diffLines.length > 15 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground bg-muted">
+                    ... {diffLines.length - 15} more lines
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {filesWithPatches.length > 2 && (
+          <p className="text-xs text-muted-foreground">
+            ... and {filesWithPatches.length - 2} more files with changes
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  const { title: commitTitle, description: commitDescription } = formatCommitMessage(selectedEvent.message);
+
+  // Debug: Log files data
+  console.log('Selected event:', selectedEvent);
+  console.log('Selected event hash:', selectedEvent.hash);
+  console.log('Selected event files:', selectedEvent.files);
+  console.log('Has files with patches:', selectedEvent.files?.some(f => f.patch));
 
   return (
-    <Card className="h-full event-card">
+    <Card className="h-full">
       <CardContent className="pt-6">
         <div className="flex items-start justify-between mb-6">
-          <div>
+          <div className="flex-1">
             <div className="flex items-center space-x-3 mb-2">
-              <span className="text-xl" data-testid="event-emoji">
-                {config?.emoji || '📝'}
-              </span>
-              <h3 className="text-xl font-semibold text-foreground" data-testid="event-title">
-                {selectedEvent.message}
+              <span className="text-xl">{config.emoji}</span>
+              <h3 className="text-xl font-semibold text-foreground flex-1">
+                {commitTitle}
               </h3>
-              <Badge 
-                className="text-xs font-medium"
-                style={{ 
-                  backgroundColor: config?.color || 'var(--muted)',
-                  color: 'white'
-                }}
-                data-testid="event-badge"
-              >
-                {config?.label || selectedEvent.type}
-              </Badge>
             </div>
-            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-              <span data-testid="event-date">
-                {d3.timeFormat("%B %d, %Y")(new Date(selectedEvent.date))}
-              </span>
+            {commitDescription && (
+              <div className="ml-8 mb-3">
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {commitDescription}
+                </p>
+              </div>
+            )}
+            <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
+              <span>{formatDate(selectedEvent.date)}</span>
               <span>•</span>
-              <div className="flex items-center space-x-1">
-                <span data-testid="event-author">{selectedEvent.author}</span>
+              <div className="flex items-center space-x-2">
+                <img 
+                  src={selectedEvent.author.avatar} 
+                  alt={selectedEvent.author.name}
+                  className="w-5 h-5 rounded-full"
+                />
+                <span>{selectedEvent.author.name}</span>
+                <span className="text-xs text-muted-foreground">@{selectedEvent.author.username}</span>
               </div>
               <span>•</span>
-              <span className="font-mono text-xs" data-testid="event-hash">
-                {selectedEvent.hash.substring(0, 7)}
-              </span>
+              <code className="text-xs bg-muted px-1 rounded">{selectedEvent.hash}</code>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge style={{ backgroundColor: config.color, color: 'white' }}>
+                {config.label}
+              </Badge>
+              {selectedEvent.importance === 'high' && (
+                <Badge variant="destructive">High Impact</Badge>
+              )}
+              <div className="flex gap-1">
+                {selectedEvent.tags.slice(0, 3).map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
-          <Button 
-            variant="outline"
-            size="sm"
-            asChild
-            data-testid="button-github-link"
-          >
-            <a 
-              href={githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-1"
-            >
+          <Button variant="outline" size="sm" asChild>
+            <a href={selectedEvent.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center space-x-1">
               <span>View on GitHub</span>
               <ExternalLink className="w-4 h-4" />
             </a>
           </Button>
         </div>
 
-        <div className="space-y-6">
-          <div>
-            <h4 className="text-sm font-semibold text-foreground mb-2">Commit Message</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed" data-testid="event-summary">
-              {selectedEvent.message}
-            </p>
-          </div>
-
-          {selectedEvent.insertions !== null && selectedEvent.deletions !== null && (
-            <div>
-              <h4 className="text-sm font-semibold text-foreground mb-2">Changes</h4>
-              <div className="flex items-center space-x-4 text-sm">
-                <div className="flex items-center space-x-1">
-                  <span className="text-green-600">+{selectedEvent.insertions}</span>
-                  <span className="text-muted-foreground">additions</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <span className="text-red-600">-{selectedEvent.deletions}</span>
-                  <span className="text-muted-foreground">deletions</span>
+        <Tabs defaultValue="commit" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="commit">Commit Details</TabsTrigger>
+            <TabsTrigger value="insights">Onboarding Insights</TabsTrigger>
+            <TabsTrigger value="context">Project Context</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="commit" className="space-y-4">
+            {(selectedEvent.stats.additions > 0 || selectedEvent.stats.deletions > 0 || selectedEvent.stats.total > 0) ? (
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Changes Summary</h4>
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className="flex items-center space-x-1">
+                    <span className="text-green-600">+{selectedEvent.stats.additions}</span>
+                    <span className="text-muted-foreground">additions</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-red-600">-{selectedEvent.stats.deletions}</span>
+                    <span className="text-muted-foreground">deletions</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-blue-600">{selectedEvent.stats.total}</span>
+                    <span className="text-muted-foreground">total changes</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            ) : null}
 
-          {files.length > 0 && (
+            {selectedEvent.files && selectedEvent.files.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Files Changed ({selectedEvent.files.length})</h4>
+                <div className="space-y-1 text-sm">
+                  {selectedEvent.files.slice(0, 8).map((file) => (
+                    <div key={file.filename} className="flex items-center justify-between p-2 bg-secondary rounded-md">
+                      <span className="font-mono text-xs text-muted-foreground truncate flex-1 mr-2">{file.filename}</span>
+                      <div className="flex items-center space-x-2 text-xs">
+                        {file.additions > 0 && (
+                          <span className="text-green-600">+{file.additions}</span>
+                        )}
+                        {file.deletions > 0 && (
+                          <span className="text-red-600">-{file.deletions}</span>
+                        )}
+                        <span className="text-muted-foreground">({file.status})</span>
+                      </div>
+                    </div>
+                  ))}
+                  {selectedEvent.files.length > 8 && (
+                    <p className="text-xs text-muted-foreground">
+                      ... and {selectedEvent.files.length - 8} more files
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {selectedEvent.files && renderDiffPreview(selectedEvent.files)}
+
             <div>
-              <h4 className="text-sm font-semibold text-foreground mb-3">Files Changed ({files.length})</h4>
-              <div className="space-y-2 max-h-64 overflow-y-auto" data-testid="files-changed">
-                {files.slice(0, 10).map((file, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-secondary rounded-md"
-                  >
-                    <div className="flex items-center space-x-3 min-w-0 flex-1">
-                      <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      <span className="text-sm font-mono truncate" title={file.filename}>
-                        {file.filename}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-xs ml-3">
-                      {file.insertions > 0 && (
-                        <span className="text-green-600">+{file.insertions}</span>
-                      )}
-                      {file.deletions > 0 && (
-                        <span className="text-red-600">-{file.deletions}</span>
-                      )}
-                    </div>
-                  </div>
+              <h4 className="text-sm font-semibold mb-2">View Full Changes</h4>
+              <Button variant="outline" size="sm" asChild className="w-full">
+                <a 
+                  href={selectedEvent.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="inline-flex items-center justify-center space-x-2"
+                >
+                  <span>View detailed changes on GitHub</span>
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </Button>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold mb-2">Commit Category</h4>
+              <p className="text-sm text-muted-foreground">{selectedEvent.category}</p>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold mb-2">Tags</h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedEvent.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
                 ))}
-                {files.length > 10 && (
-                  <div className="text-center py-2">
-                    <span className="text-sm text-muted-foreground">
-                      and {files.length - 10} more files...
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
-          )}
+          </TabsContent>
 
-          <div>
-            <h4 className="text-sm font-semibold text-foreground mb-2">Author Details</h4>
-            <div className="text-sm text-muted-foreground space-y-1">
-              <div>Name: {selectedEvent.author}</div>
-              <div>Email: {selectedEvent.authorEmail}</div>
-            </div>
-          </div>
-        </div>
+          <TabsContent value="insights" className="space-y-4">
+            {repositoryData?.onboarding ? (
+              <>
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-start space-x-3">
+                    <BookOpen className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
+                        Project Story for New Developers
+                      </h4>
+                      <p className="text-sm text-blue-800 dark:text-blue-300">
+                        {repositoryData.onboarding.projectStory}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <h4 className="text-sm font-semibold">Expert Contacts</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {repositoryData.onboarding.expertContacts.map((expert) => (
+                      <div key={expert.username} className="flex items-center justify-between p-3 bg-secondary rounded-md">
+                        <div>
+                          <span className="text-sm font-medium">@{expert.username}</span>
+                          <div className="flex gap-1 mt-1">
+                            {expert.expertise.map((skill) => (
+                              <Badge key={skill} variant="outline" className="text-xs">
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{expert.commits} commits</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                    <h4 className="text-sm font-semibold">Focus Areas to Learn</h4>
+                  </div>
+                  <div className="space-y-3">
+                    {repositoryData.onboarding.focusAreas.map((area) => (
+                      <div key={area.type}>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-medium capitalize">{area.type.replace('-', ' ')}</span>
+                          <span className="text-xs text-muted-foreground">{area.percentage}%</span>
+                        </div>
+                        <Progress value={area.percentage} className="h-2" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Onboarding insights will appear here once repository data is loaded</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="context" className="space-y-4">
+            {repositoryData ? (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center space-x-2">
+                        <Star className="w-4 h-4 text-yellow-500" />
+                        <span>Repository Stats</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Stars:</span>
+                          <span>{repositoryData.repository.stars.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Forks:</span>
+                          <span>{repositoryData.repository.forks.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Language:</span>
+                          <span>{repositoryData.repository.language}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Timeline Context</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Total Commits:</span>
+                          <span>{repositoryData.commits.length}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>This Commit:</span>
+                          <span>#{repositoryData.commits.findIndex(c => c.id === selectedEvent.id) + 1}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Impact Level:</span>
+                          <Badge variant={selectedEvent.importance === 'high' ? 'destructive' : selectedEvent.importance === 'medium' ? 'default' : 'secondary'}>
+                            {selectedEvent.importance}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Repository Description</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {repositoryData.repository.description || 'No description available'}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Info className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Project context will appear here once repository data is loaded</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

@@ -1,0 +1,134 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list [ref=e4]:
+      - status [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Repository Analysis Started
+          - generic [ref=e8]: Analyzing mssql-python. This may take a few moments.
+        - button [ref=e9] [cursor=pointer]:
+          - img [ref=e10] [cursor=pointer]
+  - generic [ref=e14]:
+    - navigation [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - img [ref=e18]
+          - heading "Codebase Time Machine" [level=1] [ref=e21]
+        - generic [ref=e23]:
+          - generic [ref=e24]: "Repo:"
+          - link "microsoft/mssql-python" [ref=e25] [cursor=pointer]:
+            - /url: https://github.com/microsoft/mssql-python
+            - generic [ref=e26] [cursor=pointer]: microsoft/mssql-python
+            - img [ref=e27] [cursor=pointer]
+      - generic [ref=e31]:
+        - button [ref=e32] [cursor=pointer]:
+          - img
+        - button [ref=e33] [cursor=pointer]:
+          - img
+    - generic [ref=e34]:
+      - complementary [ref=e35]:
+        - generic [ref=e36]:
+          - heading "Navigation" [level=2] [ref=e37]
+          - navigation [ref=e38]:
+            - button "Timeline" [ref=e39] [cursor=pointer]:
+              - img [ref=e40] [cursor=pointer]
+              - generic [ref=e42] [cursor=pointer]: Timeline
+            - button "Ownership" [ref=e43] [cursor=pointer]:
+              - img [ref=e44] [cursor=pointer]
+              - generic [ref=e49] [cursor=pointer]: Ownership
+            - button "Complexity" [ref=e50] [cursor=pointer]:
+              - img [ref=e51] [cursor=pointer]
+              - generic [ref=e55] [cursor=pointer]: Complexity
+        - generic [ref=e56]:
+          - heading "Load Repository" [level=3] [ref=e57]
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - generic [ref=e60]: Repository URL
+              - textbox "Repository URL" [ref=e61]
+            - button "Analyze Repository" [disabled]
+      - main [ref=e62]:
+        - generic [ref=e64]:
+          - generic [ref=e65]:
+            - heading "mssql-python Timeline" [level=2] [ref=e66]
+            - paragraph [ref=e67]: Microsoft Python Driver for SQL Server
+            - generic [ref=e68]:
+              - generic [ref=e69]: ⭐ 261 stars
+              - generic [ref=e70]: 🍴 24 forks
+              - generic [ref=e71]: 💾 Python
+              - generic [ref=e72]: 📅 50 commits analyzed
+          - generic [ref=e75]:
+            - img [ref=e77]
+            - generic [ref=e82] [cursor=pointer]:
+              - generic [ref=e84] [cursor=pointer]:
+                - generic [ref=e85] [cursor=pointer]:
+                  - 'heading "✨ RELEASE: 0.12.0 (#262)" [level=3] [ref=e86] [cursor=pointer]'
+                  - generic [ref=e87] [cursor=pointer]:
+                    - generic [ref=e88] [cursor=pointer]: New Feature
+                    - generic [ref=e89] [cursor=pointer]: High Impact
+                - generic [ref=e91] [cursor=pointer]:
+                  - paragraph [ref=e92] [cursor=pointer]:
+                    - strong [ref=e93] [cursor=pointer]: "Author:"
+                    - text: Gaurav Sharma (@bewithgaurav)
+                  - paragraph [ref=e94] [cursor=pointer]:
+                    - strong [ref=e95] [cursor=pointer]: "Commit:"
+                    - code [ref=e96] [cursor=pointer]: 0d745b1
+                  - paragraph [ref=e97] [cursor=pointer]:
+                    - strong [ref=e98] [cursor=pointer]: "Date:"
+                    - text: September 26, 2025 at 03:54 PM
+                  - generic [ref=e100] [cursor=pointer]: feature
+                - paragraph [ref=e102] [cursor=pointer]: ✨ Selected - View onboarding insights in the panel below
+              - generic [ref=e103] [cursor=pointer]: September 26, 2025 at 03:54 PM
+          - generic [ref=e153]:
+            - generic [ref=e156]: 🎯 Initial Commit
+            - generic [ref=e159]: ✨ New Feature
+            - generic [ref=e162]: � Bug Fix
+            - generic [ref=e165]: 📝 Documentation
+            - generic [ref=e168]: ♻️ Refactor
+            - generic [ref=e171]: 🧪 Tests
+            - generic [ref=e174]: ⚙️ Configuration
+        - generic [ref=e176]:
+          - heading "📊 Event Details & Insights" [level=2] [ref=e177]
+          - generic [ref=e179]:
+            - generic [ref=e180]:
+              - generic [ref=e181]:
+                - generic [ref=e182]:
+                  - generic [ref=e183]: ✨
+                  - 'heading "RELEASE: 0.12.0 (#262)" [level=3] [ref=e184]'
+                - paragraph [ref=e186]: "### Work Item / Issue Reference <!-- IMPORTANT: Please follow the PR template guidelines below. For mssql-python maintainers: Insert your ADO Work Item ID below (e.g. AB#37452) For external contributors: Insert Github Issue number below (e.g. #149) Only one reference is required - either GitHub issue OR ADO Work Item. --> <!-- mssql-python maintainers: ADO Work Item --> > [AB#38881](https://sqlclientdrivers.visualstudio.com/c6d89619-62de-46a0-8b46-70b92a84d85e/_workitems/edit/38881) ------------------------------------------------------------------- ### Summary <!-- Insert your summary of changes below. Minimum 10 characters required. --> This pull request updates the project to version 0.12.0 and revises the release notes to reflect new features and improvements. The most significant changes are the addition of support for new SQL Server data types, enhancements to financial data handling, improvements to development infrastructure, and optimizations to metadata APIs and data processing. Version and Release Notes Update: * Updated the project version from `0.11.0` to `0.12.0` in `setup.py`. * Revised the \"What's new\" section in `PyPI_Description.md` to: - Add support for `DATETIMEOFFSET` and `UNIQUEIDENTIFIER` types, with integration for Python's `datetime` and `uuid.UUID`. - Extend `MONEY` and `SMALLMONEY` support to `executemany`, improving bulk financial data processing. - Implement unified Python and C++ code coverage, CodeQL analysis, and enhanced PR automation. - Refactor the `getinfo()` metadata API for improved reliability and expanded constant exposure. - Optimize data processing by removing aggressive datetime parsing for better data integrity."
+                - generic [ref=e187]:
+                  - generic [ref=e188]: September 26, 2025 at 03:54 PM
+                  - generic [ref=e189]: •
+                  - generic [ref=e190]:
+                    - img "Gaurav Sharma" [ref=e191]
+                    - generic [ref=e192]: Gaurav Sharma
+                    - generic [ref=e193]: "@bewithgaurav"
+                  - generic [ref=e194]: •
+                  - code [ref=e195]: 0d745b1
+                - generic [ref=e196]:
+                  - generic [ref=e197]: New Feature
+                  - generic [ref=e198]: High Impact
+                  - generic [ref=e200]: feature
+              - link "View on GitHub" [ref=e201] [cursor=pointer]:
+                - /url: https://github.com/microsoft/mssql-python/commit/0d745b151a7c39e3c05b23226c8294d059457c9e
+                - generic [ref=e202] [cursor=pointer]: View on GitHub
+                - img
+            - generic [ref=e203]:
+              - tablist [ref=e204]:
+                - tab "Commit Details" [selected] [ref=e205] [cursor=pointer]
+                - tab "Onboarding Insights" [ref=e206] [cursor=pointer]
+                - tab "Project Context" [ref=e207] [cursor=pointer]
+              - tabpanel "Commit Details" [ref=e208]:
+                - generic [ref=e209]:
+                  - heading "Commit Info" [level=4] [ref=e210]
+                  - paragraph [ref=e211]:
+                    - link "View detailed changes on GitHub →" [ref=e212] [cursor=pointer]:
+                      - /url: https://github.com/microsoft/mssql-python/commit/0d745b151a7c39e3c05b23226c8294d059457c9e
+                - generic [ref=e213]:
+                  - heading "Commit Category" [level=4] [ref=e214]
+                  - paragraph [ref=e215]: New Feature
+                - generic [ref=e216]:
+                  - heading "Tags" [level=4] [ref=e217]
+                  - generic [ref=e219]: feature
+```

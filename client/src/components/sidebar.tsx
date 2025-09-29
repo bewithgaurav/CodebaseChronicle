@@ -11,7 +11,7 @@ import { analyzeRepositorySchema, type Repository } from "@shared/schema";
 interface SidebarProps {
   activeTab: 'timeline' | 'ownership' | 'complexity';
   setActiveTab: (tab: 'timeline' | 'ownership' | 'complexity') => void;
-  onRepositoryAnalyzed: (repositoryId: string) => void;
+  onRepositoryAnalyzed: (repositoryId: string, repositoryUrl: string) => void;
 }
 
 export default function Sidebar({ activeTab, setActiveTab, onRepositoryAnalyzed }: SidebarProps) {
@@ -29,7 +29,7 @@ export default function Sidebar({ activeTab, setActiveTab, onRepositoryAnalyzed 
         title: "Repository Analysis Started",
         description: `Analyzing ${repository.name}. This may take a few moments.`,
       });
-      onRepositoryAnalyzed(repository.id);
+      onRepositoryAnalyzed(repository.id, repository.url);
       setRepoUrl("");
     },
     onError: (error: Error) => {
