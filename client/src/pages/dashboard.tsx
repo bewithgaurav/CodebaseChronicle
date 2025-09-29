@@ -18,6 +18,15 @@ interface CommitStats {
   total: number;
 }
 
+interface CommitFile {
+  filename: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  changes: number;
+  patch?: string;
+}
+
 interface Commit {
   id: string;
   hash: string;
@@ -30,6 +39,7 @@ interface Commit {
   importance: 'high' | 'medium' | 'low';
   tags: string[];
   stats: CommitStats;
+  files?: CommitFile[];
 }
 
 interface RepositoryData {

@@ -18,6 +18,15 @@ interface CommitStats {
   total: number;
 }
 
+interface CommitFile {
+  filename: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  changes: number;
+  patch?: string;
+}
+
 interface Commit {
   id: string;
   hash: string;
@@ -30,6 +39,7 @@ interface Commit {
   importance: 'high' | 'medium' | 'low';
   tags: string[];
   stats: CommitStats;
+  files?: CommitFile[];
 }
 
 interface OnboardingTips {
@@ -115,7 +125,121 @@ export default function EventDetails({ selectedEvent, repositoryData }: EventDet
     return { title, description };
   };
 
+  const parseDiffLines = (patch: string): Array<{ type: 'context' | 'addition' | 'deletion', content: string, lineNumber?: number }> => {
+    if (!patch) return [];
+    
+    const lines = patch.split('\n');
+    const diffLines = [];
+    
+    for (const line of lines) {
+      if (line.startsWith('@@')) continue; // Skip hunk headers
+      if (line.startsWith('+++') || line.startsWith('---')) continue; // Skip file headers
+      
+      if (line.startsWith('+')) {
+        diffLines.push({ type: 'addition' as const, content: line });
+      } else if (line.startsWith('-')) {
+        diffLines.push({ type: 'deletion' as const, content: line });
+      } else if (line.startsWith(' ')) {
+        diffLines.push({ type: 'context' as const, content: line });
+      }
+    }
+    
+    return diffLines.slice(0, 20); // Limit to first 20 lines for display
+  };
+
+  const renderDiffPreview = (files: CommitFile[]) => {
+    console.log('renderDiffPreview called with files:', files);
+    
+    if (!files || files.length === 0) {
+      console.log('No files provided');
+      return null;
+    }
+    
+    const filesWithPatches = files.filter(f => f.patch && f.patch.trim() !== '');
+    console.log('Files with patches:', filesWithPatches.length, 'out of', files.length);
+    
+    if (filesWithPatches.length === 0) {
+      return (
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold">Code Changes Preview</h4>
+          <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+            No diff preview available. This may be a binary file change or the patch data is not accessible.
+            <br />
+            <a 
+              href={`https://github.com/commit/${files[0]?.filename}`} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              View full changes on GitHub →
+            </a>
+          </div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold">Code Changes Preview</h4>
+        {filesWithPatches.slice(0, 2).map((file) => {
+          const diffLines = parseDiffLines(file.patch || '');
+          if (diffLines.length === 0) return null;
+          
+          return (
+            <div key={file.filename} className="border rounded-md overflow-hidden">
+              <div className="bg-gray-50 dark:bg-gray-800 px-3 py-2 border-b">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-mono text-gray-700 dark:text-gray-300 truncate flex-1 mr-2">{file.filename}</span>
+                  <div className="flex items-center space-x-2 text-xs">
+                    {file.additions > 0 && (
+                      <span className="text-green-600 font-semibold">+{file.additions}</span>
+                    )}
+                    {file.deletions > 0 && (
+                      <span className="text-red-600 font-semibold">-{file.deletions}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="max-h-40 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                {diffLines.slice(0, 15).map((line, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`px-3 py-0.5 text-xs font-mono leading-relaxed border-l-2 ${
+                      line.type === 'addition' 
+                        ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-400' 
+                        : line.type === 'deletion' 
+                        ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border-red-400'
+                        : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300'
+                    }`}
+                  >
+                    {line.content}
+                  </div>
+                ))}
+                {diffLines.length > 15 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground bg-muted">
+                    ... {diffLines.length - 15} more lines
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {filesWithPatches.length > 2 && (
+          <p className="text-xs text-muted-foreground">
+            ... and {filesWithPatches.length - 2} more files with changes
+          </p>
+        )}
+      </div>
+    );
+  };
+
   const { title: commitTitle, description: commitDescription } = formatCommitMessage(selectedEvent.message);
+
+  // Debug: Log files data
+  console.log('Selected event:', selectedEvent);
+  console.log('Selected event hash:', selectedEvent.hash);
+  console.log('Selected event files:', selectedEvent.files);
+  console.log('Has files with patches:', selectedEvent.files?.some(f => f.patch));
 
   return (
     <Card className="h-full">
@@ -200,21 +324,51 @@ export default function EventDetails({ selectedEvent, repositoryData }: EventDet
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : null}
+
+            {selectedEvent.files && selectedEvent.files.length > 0 && (
               <div>
-                <h4 className="text-sm font-semibold mb-2">Commit Info</h4>
-                <p className="text-sm text-muted-foreground">
-                  <a 
-                    href={selectedEvent.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-blue-600 hover:text-blue-800 underline"
-                  >
-                    View detailed changes on GitHub →
-                  </a>
-                </p>
+                <h4 className="text-sm font-semibold mb-2">Files Changed ({selectedEvent.files.length})</h4>
+                <div className="space-y-1 text-sm">
+                  {selectedEvent.files.slice(0, 8).map((file) => (
+                    <div key={file.filename} className="flex items-center justify-between p-2 bg-secondary rounded-md">
+                      <span className="font-mono text-xs text-muted-foreground truncate flex-1 mr-2">{file.filename}</span>
+                      <div className="flex items-center space-x-2 text-xs">
+                        {file.additions > 0 && (
+                          <span className="text-green-600">+{file.additions}</span>
+                        )}
+                        {file.deletions > 0 && (
+                          <span className="text-red-600">-{file.deletions}</span>
+                        )}
+                        <span className="text-muted-foreground">({file.status})</span>
+                      </div>
+                    </div>
+                  ))}
+                  {selectedEvent.files.length > 8 && (
+                    <p className="text-xs text-muted-foreground">
+                      ... and {selectedEvent.files.length - 8} more files
+                    </p>
+                  )}
+                </div>
               </div>
             )}
+
+            {selectedEvent.files && renderDiffPreview(selectedEvent.files)}
+
+            <div>
+              <h4 className="text-sm font-semibold mb-2">View Full Changes</h4>
+              <Button variant="outline" size="sm" asChild className="w-full">
+                <a 
+                  href={selectedEvent.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="inline-flex items-center justify-center space-x-2"
+                >
+                  <span>View detailed changes on GitHub</span>
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </Button>
+            </div>
 
             <div>
               <h4 className="text-sm font-semibold mb-2">Commit Category</h4>

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { VerticalTimeline, VerticalTimelineElement } from 'react-vertical-timeline-component';
 import 'react-vertical-timeline-component/style.min.css';
 import { Loader2, BarChart3, GitCommit, Bug, Wrench, Building2, Rocket, FileText, Settings, TestTube } from "lucide-react";
@@ -16,6 +17,15 @@ interface CommitStats {
   total: number;
 }
 
+interface CommitFile {
+  filename: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  changes: number;
+  patch?: string;
+}
+
 interface Commit {
   id: string;
   hash: string;
@@ -28,6 +38,7 @@ interface Commit {
   importance: 'high' | 'medium' | 'low';
   tags: string[];
   stats: CommitStats;
+  files?: CommitFile[];
 }
 
 interface RepositoryData {
@@ -177,11 +188,30 @@ export default function Timeline({ repositoryId, onEventSelect, selectedEvent }:
       if (!response.ok) {
         throw new Error('Failed to fetch commits');
       }
-      return response.json();
+      const data = await response.json();
+      
+      // Debug: Log the first few commits to see their structure
+      if (data.commits && data.commits.length > 0) {
+        console.log('API Response - First commit structure:', data.commits[0]);
+        console.log('API Response - First commit has files:', !!data.commits[0].files);
+        console.log('API Response - First commit files length:', data.commits[0].files?.length || 'undefined');
+      }
+      
+      return data;
     },
     enabled: !!repositoryId && !!repository,
     refetchInterval: false
   });
+
+  // Auto-select the most recent commit if none selected (moved to top level)
+  useEffect(() => {
+    if (repositoryData && repositoryData.commits && repositoryData.commits.length > 0 && !selectedEvent) {
+      const sortedCommits = [...repositoryData.commits].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      onEventSelect(sortedCommits[0], repositoryData);
+    }
+  }, [repositoryData, selectedEvent, onEventSelect]);
 
   if (!repositoryId) {
     return (
@@ -248,11 +278,6 @@ export default function Timeline({ repositoryId, onEventSelect, selectedEvent }:
   const sortedCommits = [...commits].sort((a, b) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
-
-  // Auto-select the most recent commit if none selected
-  if (!selectedEvent && sortedCommits.length > 0) {
-    onEventSelect(sortedCommits[0], repositoryData);
-  }
 
   return (
     <div className="bg-card border-b border-border p-6">
