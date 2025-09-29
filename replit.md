@@ -1,8 +1,8 @@
-# Codebase Time Machine
+# Codebase Chronicle
 
 ## Overview
 
-Codebase Time Machine is a full-stack web application that visualizes the evolution of GitHub repositories over time. The application analyzes git commit history to help new engineers understand how codebases have evolved through feature development, bug fixes, refactoring, and architectural changes. Users input a GitHub repository URL and receive an interactive timeline visualization categorizing commits into different event types (major features, minor features, bug fixes, refactors, and architecture changes).
+Codebase Chronicle is a full-stack web application that visualizes the evolution of GitHub repositories over time. The application analyzes git commit history to help new engineers understand how codebases have evolved through feature development, bug fixes, refactoring, and architectural changes. Users input a GitHub repository URL and receive an interactive timeline visualization categorizing commits into different event types (major features, minor features, bug fixes, refactors, and architecture changes).
 
 ## User Preferences
 

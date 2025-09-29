@@ -79,7 +79,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col h-screen">
-      <Navbar repositoryId={repositoryId} />
+      <Navbar repositoryId={repositoryId} repositoryUrl={repositoryUrl} />
       
       <div className="flex flex-1 overflow-hidden">
         <Sidebar 
