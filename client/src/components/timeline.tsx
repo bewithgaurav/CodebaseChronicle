@@ -59,6 +59,7 @@ interface RepositoryData {
 
 interface TimelineProps {
   repositoryId: string | null;
+  repositoryUrl: string | null;
   onEventSelect: (event: Commit | null, data?: RepositoryData) => void;
   selectedEvent: Commit | null;
 }
@@ -167,22 +168,14 @@ const getCommitDescription = (commit: Commit) => {
   );
 };
 
-export default function Timeline({ repositoryId, onEventSelect, selectedEvent }: TimelineProps) {
-  const { data: repository } = useQuery<{ status: string; url?: string; name?: string; owner?: string }>({
-    queryKey: ["/api/repositories", repositoryId],
-    enabled: !!repositoryId,
-  });
-
+export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, selectedEvent }: TimelineProps) {
   const { data: repositoryData, isLoading, isError } = useQuery<RepositoryData>({
-    queryKey: ["/api/repositories", repositoryId, "commits", repository?.url],
+    queryKey: ["/api/repositories", repositoryId, "commits", repositoryUrl],
     queryFn: async () => {
-      if (!repositoryId) throw new Error('Repository ID is required');
+      if (!repositoryId || !repositoryUrl) throw new Error('Repository ID and URL are required');
       
-      // Build the URL with repository URL as query parameter if available
-      let url = `/api/repositories/${repositoryId}/commits`;
-      if (repository?.url) {
-        url += `?url=${encodeURIComponent(repository.url)}`;
-      }
+      // Build the URL with repository URL as query parameter
+      const url = `/api/repositories/${repositoryId}/commits?url=${encodeURIComponent(repositoryUrl)}`;
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -199,7 +192,7 @@ export default function Timeline({ repositoryId, onEventSelect, selectedEvent }:
       
       return data;
     },
-    enabled: !!repositoryId && !!repository,
+    enabled: !!repositoryId && !!repositoryUrl,
     refetchInterval: false
   });
 

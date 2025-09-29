@@ -15,19 +15,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { id } = req.query;
+    const { id, url } = req.query;
 
     if (!id || typeof id !== 'string') {
       return res.status(400).json({ message: 'Repository ID is required' });
     }
 
-    // For now, return a basic repository structure
-    // In a real app, you'd retrieve this from your database
+    // If URL is provided, parse it to get repository info
+    if (url && typeof url === 'string') {
+      const repositoryUrl = decodeURIComponent(url);
+      const match = repositoryUrl.match(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/?(?:\.git)?$/);
+      
+      if (match) {
+        const [, owner, name] = match;
+        const cleanName = name.replace(/\.git$/, '');
+        
+        const response = {
+          id,
+          name: cleanName,
+          owner,
+          url: repositoryUrl,
+          status: 'completed',
+          createdAt: new Date().toISOString()
+        };
+
+        return res.json(response);
+      }
+    }
+
+    // Fallback - return basic info (this shouldn't happen in production)
     const repository = {
       id,
-      name: 'react',
-      owner: 'facebook',
-      url: 'https://github.com/facebook/react',
+      name: 'Unknown Repository',
+      owner: 'Unknown Owner',
+      url: '',
       status: 'completed',
       createdAt: new Date().toISOString()
     };

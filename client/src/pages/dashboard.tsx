@@ -61,6 +61,7 @@ interface RepositoryData {
 export default function Dashboard() {
   const [selectedEvent, setSelectedEvent] = useState<Commit | null>(null);
   const [repositoryId, setRepositoryId] = useState<string | null>(null);
+  const [repositoryUrl, setRepositoryUrl] = useState<string | null>(null);
   const [repositoryData, setRepositoryData] = useState<RepositoryData | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<'timeline' | 'ownership' | 'complexity'>('timeline');
 
@@ -71,6 +72,11 @@ export default function Dashboard() {
     }
   };
 
+  const handleRepositoryAnalyzed = (repositoryId: string, repositoryUrl: string) => {
+    setRepositoryId(repositoryId);
+    setRepositoryUrl(repositoryUrl);
+  };
+
   return (
     <div className="flex flex-col h-screen">
       <Navbar repositoryId={repositoryId} />
@@ -79,7 +85,7 @@ export default function Dashboard() {
         <Sidebar 
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          onRepositoryAnalyzed={setRepositoryId}
+          onRepositoryAnalyzed={handleRepositoryAnalyzed}
         />
         
         <main className="flex-1 flex flex-col bg-background">
@@ -88,6 +94,7 @@ export default function Dashboard() {
               <div className="flex-1 overflow-y-auto">
                 <Timeline 
                   repositoryId={repositoryId}
+                  repositoryUrl={repositoryUrl}
                   onEventSelect={handleEventSelect}
                   selectedEvent={selectedEvent}
                 />

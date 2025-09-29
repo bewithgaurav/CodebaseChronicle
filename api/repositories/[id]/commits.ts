@@ -157,8 +157,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ message: 'Repository ID is required' });
     }
 
-    // Get repository URL from query param or use default for testing
-    let repositoryUrl = typeof url === 'string' ? decodeURIComponent(url) : 'https://github.com/facebook/react';
+    // Get repository URL from query param - it's required
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ message: 'Repository URL is required as query parameter' });
+    }
+    
+    let repositoryUrl = decodeURIComponent(url);
     
     // Validate and parse GitHub URL
     const match = repositoryUrl.match(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/?(?:\.git)?$/);
