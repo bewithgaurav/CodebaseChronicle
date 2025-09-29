@@ -131,35 +131,14 @@ const getCommitTitle = (message: string) => {
 };
 
 const getCommitDescription = (commit: Commit) => {
-  const changes = [];
-  if (commit.stats.additions > 0) {
-    changes.push(`+${commit.stats.additions} additions`);
-  }
-  if (commit.stats.deletions > 0) {
-    changes.push(`-${commit.stats.deletions} deletions`);
-  }
-  
-  const changeText = changes.length > 0 ? ` (${changes.join(', ')})` : '';
-  
   return (
-    <div className="space-y-2">
-      <p className="text-sm text-gray-600 dark:text-gray-300">
-        <strong>Author:</strong> {commit.author.name} (@{commit.author.username})
+    <div className="space-y-1">
+      <p className="text-xs text-gray-600 dark:text-gray-300">
+        <strong>Author:</strong> {commit.author.name}
       </p>
-      <p className="text-sm text-gray-600 dark:text-gray-300">
-        <strong>Commit:</strong> <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{commit.hash}</code>
-      </p>
-      {changeText && (
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          <strong>Changes:</strong> {changeText}
-        </p>
-      )}
-      <p className="text-sm text-gray-600 dark:text-gray-300">
-        <strong>Date:</strong> {formatDate(new Date(commit.date))}
-      </p>
-      <div className="flex flex-wrap gap-1 mt-2">
-        {commit.tags.map((tag) => (
-          <span key={tag} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+      <div className="flex flex-wrap gap-1 mt-1">
+        {commit.tags.slice(0, 2).map((tag) => (
+          <span key={tag} className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
             {tag}
           </span>
         ))}
@@ -196,15 +175,15 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
     refetchInterval: false
   });
 
-  // Auto-select the most recent commit if none selected (moved to top level)
-  useEffect(() => {
-    if (repositoryData && repositoryData.commits && repositoryData.commits.length > 0 && !selectedEvent) {
-      const sortedCommits = [...repositoryData.commits].sort((a, b) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-      onEventSelect(sortedCommits[0], repositoryData);
-    }
-  }, [repositoryData, selectedEvent, onEventSelect]);
+  // Auto-selection disabled - let user manually select commits
+  // useEffect(() => {
+  //   if (repositoryData && repositoryData.commits && repositoryData.commits.length > 0 && !selectedEvent) {
+  //     const sortedCommits = [...repositoryData.commits].sort((a, b) => 
+  //       new Date(b.date).getTime() - new Date(a.date).getTime()
+  //     );
+  //     onEventSelect(sortedCommits[0], repositoryData);
+  //   }
+  // }, [repositoryData, selectedEvent, onEventSelect]);
 
   if (!repositoryId) {
     return (
@@ -312,18 +291,20 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
                     : '0 2px 8px rgba(0, 0, 0, 0.05)',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
+                  padding: '12px 16px'
                 }}
                 contentArrowStyle={{
                   borderRight: `7px solid ${isSelected ? config.color : 'var(--border)'}`,
                 }}
-                date={formatDate(new Date(commit.date))}
-                dateClassName="timeline-date"
                 iconStyle={{
                   background: config.color,
                   color: '#fff',
                   border: `2px solid ${config.color}`,
+                  width: '32px',
+                  height: '32px',
+                  marginLeft: '-16px'
                 }}
-                icon={<IconComponent size={20} />}
+                icon={<IconComponent size={16} />}
                 onTimelineElementClick={() => {
                   // Toggle selection: if already selected, unselect it
                   if (selectedEvent?.id === commit.id) {
@@ -334,12 +315,12 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
                 }}
               >
                 <div className="timeline-content">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="vertical-timeline-element-title font-semibold text-base">
+                  <div className="flex items-start justify-between mb-1">
+                    <h3 className="vertical-timeline-element-title font-medium text-sm">
                       {config.emoji} {getCommitTitle(commit.message)}
                     </h3>
                     <div className="flex flex-col gap-1 items-end">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium"
                             style={{
                               backgroundColor: config.bgColor,
                               color: config.color
@@ -347,7 +328,7 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
                         {config.label}
                       </span>
                       {commit.importance === 'high' && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
                           High Impact
                         </span>
                       )}
@@ -359,9 +340,9 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
                   </div>
                   
                   {isSelected && (
-                    <div className="mt-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <p className="text-sm text-blue-800 dark:text-blue-200">
-                        ✨ Selected - View onboarding insights in the panel below
+                    <div className="mt-2 px-2 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-xs text-blue-800 dark:text-blue-200">
+                        ✨ Selected - View details in the panel below
                       </p>
                     </div>
                   )}
