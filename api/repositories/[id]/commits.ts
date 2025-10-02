@@ -151,7 +151,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { id, url } = req.query;
+    const { id, url, page } = req.query;
 
     if (!id || typeof id !== 'string') {
       return res.status(400).json({ message: 'Repository ID is required' });
@@ -161,6 +161,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!url || typeof url !== 'string') {
       return res.status(400).json({ message: 'Repository URL is required as query parameter' });
     }
+    
+    // Get page number for pagination (default to 1)
+    const pageNumber = page && typeof page === 'string' ? parseInt(page, 10) : 1;
+    
+    // Get GitHub token from environment (optional, but recommended to avoid rate limits)
+    const githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT;
+    console.log('GitHub token available:', !!githubToken, githubToken ? `(${githubToken.substring(0, 10)}...)` : 'NO TOKEN');
+    
+    const headers: HeadersInit = githubToken 
+      ? { 
+          'Authorization': `token ${githubToken}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      : {
+          'Accept': 'application/vnd.github.v3+json'
+        };
     
     let repositoryUrl = decodeURIComponent(url);
     
@@ -176,55 +192,91 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(`Fetching commits for ${owner}/${cleanRepo}`);
 
     // Fetch repository info
-    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}`);
+    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}`, { headers });
+    
+    // Log rate limit info
+    console.log('Rate limit remaining:', repoResponse.headers.get('x-ratelimit-remaining'));
+    console.log('Rate limit reset:', repoResponse.headers.get('x-ratelimit-reset'));
+    
     if (!repoResponse.ok) {
+      const errorData = await repoResponse.json().catch(() => ({}));
+      console.error('GitHub API error:', repoResponse.status, errorData);
+      
+      // Check for enterprise/organization token restrictions
+      if (repoResponse.status === 403 && errorData.message?.includes('fine-grained personal access token')) {
+        return res.status(403).json({ 
+          message: 'GitHub token type not allowed for this repository', 
+          error: 'token_type_restricted',
+          rateLimitInfo: 'This repository requires a Classic Personal Access Token, not a fine-grained token. Please create a Classic token at: https://github.com/settings/tokens'
+        });
+      }
+      
+      if (repoResponse.status === 403 && errorData.message?.includes('rate limit')) {
+        return res.status(403).json({ 
+          message: 'GitHub API rate limit exceeded', 
+          error: 'rate_limit_exceeded',
+          rateLimitInfo: 'You\'ve hit GitHub\'s API rate limit (60 requests/hour). Please add a GitHub Personal Access Token to increase the limit to 5000 requests/hour.'
+        });
+      }
       throw new Error(`GitHub API error: ${repoResponse.status} - ${repoResponse.statusText}`);
     }
     const repoData: Repository = await repoResponse.json();
 
-    // Fetch commits with basic info first
+    // Fetch commits with basic info first (30 per page for better UX)
     const commitsResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${cleanRepo}/commits?per_page=15`
+      `https://api.github.com/repos/${owner}/${cleanRepo}/commits?per_page=30&page=${pageNumber}`,
+      { headers }
     );
     if (!commitsResponse.ok) {
+      const errorData = await commitsResponse.json().catch(() => ({}));
+      
+      // Check for enterprise/organization token restrictions
+      if (commitsResponse.status === 403 && errorData.message?.includes('fine-grained personal access token')) {
+        return res.status(403).json({ 
+          message: 'GitHub token type not allowed for this repository', 
+          error: 'token_type_restricted',
+          rateLimitInfo: 'This repository requires a Classic Personal Access Token, not a fine-grained token. Please create a Classic token at: https://github.com/settings/tokens'
+        });
+      }
+      
+      if (commitsResponse.status === 403 && errorData.message?.includes('rate limit')) {
+        return res.status(403).json({ 
+          message: 'GitHub API rate limit exceeded', 
+          error: 'rate_limit_exceeded',
+          rateLimitInfo: 'You\'ve hit GitHub\'s API rate limit (60 requests/hour). Please add a GitHub Personal Access Token to increase the limit to 5000 requests/hour.'
+        });
+      }
       throw new Error(`GitHub API error: ${commitsResponse.status} - ${commitsResponse.statusText}`);
     }
     const commitsData: GitHubCommit[] = await commitsResponse.json();
 
-    // Fetch detailed commit info with file changes for ALL commits
-    // but limit the total to avoid hitting rate limits
-    const detailedCommits = [];
-    for (let i = 0; i < commitsData.length; i++) {
-      const commit = commitsData[i];
+    // Fetch detailed commit info with file changes in PARALLEL for speed
+    // Fetch only first 10 commits with full details to speed up initial load
+    const detailPromises = commitsData.slice(0, 10).map(async (commit) => {
       try {
         const detailUrl = `https://api.github.com/repos/${owner}/${cleanRepo}/commits/${commit.sha}`;
-        console.log(`Fetching details for commit ${commit.sha.substring(0, 7)} from:`, detailUrl);
-        
-        const detailResponse = await fetch(detailUrl);
-        console.log(`Response status for ${commit.sha.substring(0, 7)}:`, detailResponse.status);
+        const detailResponse = await fetch(detailUrl, { headers });
         
         if (detailResponse.ok) {
           const detail: GitHubCommitDetail = await detailResponse.json();
-          console.log(`SUCCESS - Got ${detail.files?.length || 0} files for commit ${commit.sha.substring(0, 7)}`);
-          console.log(`SUCCESS - Stats for commit ${commit.sha.substring(0, 7)}:`, detail.stats);
-          console.log(`SUCCESS - Has files array:`, Array.isArray(detail.files));
-          console.log(`SUCCESS - First file:`, detail.files?.[0]?.filename || 'No files');
-          
-          detailedCommits.push({ ...commit, stats: detail.stats, files: detail.files });
+          return { ...commit, stats: detail.stats, files: detail.files };
         } else {
-          console.warn(`FAILED - Response ${detailResponse.status} for commit ${commit.sha.substring(0, 7)}`);
-          const errorText = await detailResponse.text();
-          console.warn(`FAILED - Error:`, errorText);
-          detailedCommits.push(commit);
+          return commit;
         }
       } catch (error) {
-        console.error(`EXCEPTION - Failed to fetch details for commit ${commit.sha.substring(0, 7)}:`, error);
-        detailedCommits.push(commit);
+        console.error(`Failed to fetch details for commit ${commit.sha.substring(0, 7)}:`, error);
+        return commit;
       }
-    }
+    });
 
-    // Use all detailed commits
-    const allCommits = detailedCommits;
+    // Wait for all parallel requests to complete
+    const detailedCommits = await Promise.all(detailPromises);
+    
+    // For remaining commits, use basic info (no file details)
+    const remainingCommits = commitsData.slice(10);
+    
+    // Combine detailed and basic commits
+    const allCommits = [...detailedCommits, ...remainingCommits];
 
     // Transform commits for our timeline with onboarding insights
     const commits = allCommits.map((commit, index) => {
@@ -249,16 +301,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         stats: commit.stats || { additions: 0, deletions: 0, total: 0 },
         files: commit.files || []
       };
-      
-      if (index < 5) {
-        console.log(`Commit ${transformedCommit.hash} has ${transformedCommit.files.length} files`);
-        console.log(`Commit ${transformedCommit.hash} files:`, transformedCommit.files.map(f => ({ 
-          filename: f.filename, 
-          additions: f.additions, 
-          deletions: f.deletions,
-          hasPatch: !!f.patch 
-        })));
-      }
       
       return transformedCommit;
     });
@@ -334,13 +376,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       commits,
       insights,
-      onboarding: onboardingTips
+      onboarding: onboardingTips,
+      pagination: {
+        page: pageNumber,
+        perPage: 30,
+        hasMore: commits.length === 30 // If we got full page, there might be more
+      }
     });
   } catch (error) {
     console.error('Commits fetch error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Check if it's a rate limit error
+    if (errorMessage.includes('rate limit') || errorMessage.includes('403')) {
+      return res.status(403).json({ 
+        message: 'GitHub API rate limit exceeded', 
+        error: 'rate_limit_exceeded',
+        rateLimitInfo: 'You\'ve hit GitHub\'s API rate limit. To fix this, add a GITHUB_TOKEN environment variable with a GitHub Personal Access Token.',
+        details: errorMessage
+      });
+    }
+    
     res.status(500).json({ 
       message: 'Failed to fetch commits', 
-      error: error instanceof Error ? error.message : String(error) 
+      error: errorMessage
     });
   }
 }

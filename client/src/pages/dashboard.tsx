@@ -4,6 +4,13 @@ import Navbar from "@/components/navbar";
 import Sidebar from "@/components/sidebar";
 import Timeline from "@/components/timeline";
 import EventDetails from "@/components/event-details";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 interface Author {
   name: string;
@@ -88,10 +95,10 @@ export default function Dashboard() {
           onRepositoryAnalyzed={handleRepositoryAnalyzed}
         />
         
-        <main className="flex-1 flex flex-col bg-background">
+        <main className="flex-1 flex flex-col bg-background overflow-y-auto">
           {activeTab === 'timeline' && (
             <>
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-shrink-0">
                 <Timeline 
                   repositoryId={repositoryId}
                   repositoryUrl={repositoryUrl}
@@ -100,15 +107,23 @@ export default function Dashboard() {
                 />
               </div>
               
-              <div className="h-96 border-t border-border bg-card overflow-y-auto">
-                <div className="p-6">
-                  <h2 className="text-lg font-semibold mb-4 text-foreground">📊 Event Details & Insights</h2>
-                  <EventDetails 
-                    selectedEvent={selectedEvent} 
-                    repositoryData={repositoryData}
-                  />
-                </div>
-              </div>
+              {/* Details Sheet - Only shows when a commit is selected */}
+              <Sheet open={!!selectedEvent} onOpenChange={(open) => !open && setSelectedEvent(null)}>
+                <SheetContent side="bottom" className="h-[80vh] overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle>📊 Event Details & Insights</SheetTitle>
+                    <SheetDescription>
+                      Detailed information about the selected commit
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="mt-6">
+                    <EventDetails 
+                      selectedEvent={selectedEvent} 
+                      repositoryData={repositoryData}
+                    />
+                  </div>
+                </SheetContent>
+              </Sheet>
             </>
           )}
           
