@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useCallback } from "react";
 import { VerticalTimeline, VerticalTimelineElement } from 'react-vertical-timeline-component';
 import 'react-vertical-timeline-component/style.min.css';
 import { Loader2, BarChart3, GitCommit, Bug, Wrench, Building2, Rocket, FileText, Settings, TestTube } from "lucide-react";
@@ -55,6 +55,11 @@ interface RepositoryData {
   commits: Commit[];
   insights: any;
   onboarding: any;
+  pagination: {
+    page: number;
+    perPage: number;
+    hasMore: boolean;
+  };
 }
 
 interface TimelineProps {
@@ -148,22 +153,54 @@ const getCommitDescription = (commit: Commit) => {
 };
 
 export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, selectedEvent }: TimelineProps) {
-  const { data: repositoryData, isLoading, isError } = useQuery<RepositoryData>({
+  const observerTarget = useRef<HTMLDivElement>(null);
+  
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    error
+  } = useInfiniteQuery<RepositoryData>({
     queryKey: ["/api/repositories", repositoryId, "commits", repositoryUrl],
-    queryFn: async () => {
+    queryFn: async ({ pageParam }) => {
       if (!repositoryId || !repositoryUrl) throw new Error('Repository ID and URL are required');
       
-      // Build the URL with repository URL as query parameter
-      const url = `/api/repositories/${repositoryId}/commits?url=${encodeURIComponent(repositoryUrl)}`;
+      const page = typeof pageParam === 'number' ? pageParam : 1;
+      // Build the URL with repository URL and page as query parameters
+      const url = `/api/repositories/${repositoryId}/commits?url=${encodeURIComponent(repositoryUrl)}&page=${page}`;
+      
+      console.log('Fetching commits from:', url, 'page:', page);
       
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error('Failed to fetch commits');
+        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch commits' }));
+        
+        // Handle token type restriction error
+        if (response.status === 403 && errorData.error === 'token_type_restricted') {
+          throw new Error('GitHub token type not supported. Please use a Classic Personal Access Token instead of a fine-grained token.');
+        }
+        
+        // Handle rate limit error specially
+        if (response.status === 403 && errorData.error === 'rate_limit_exceeded') {
+          throw new Error('GitHub API rate limit exceeded. Please add a GitHub Personal Access Token to continue.');
+        }
+        
+        throw new Error(errorData.message || 'Failed to fetch commits');
       }
       const data = await response.json();
       
+      console.log('Got response:', {
+        commitsCount: data.commits?.length,
+        hasRepository: !!data.repository,
+        hasPagination: !!data.pagination,
+        pagination: data.pagination
+      });
+      
       // Debug: Log the first few commits to see their structure
-      if (data.commits && data.commits.length > 0) {
+      if (data.commits && data.commits.length > 0 && page === 1) {
         console.log('API Response - First commit structure:', data.commits[0]);
         console.log('API Response - First commit has files:', !!data.commits[0].files);
         console.log('API Response - First commit files length:', data.commits[0].files?.length || 'undefined');
@@ -171,8 +208,52 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
       
       return data;
     },
+    getNextPageParam: (lastPage) => {
+      // Return next page number if there are more commits
+      console.log('getNextPageParam called:', lastPage.pagination);
+      return lastPage.pagination?.hasMore ? lastPage.pagination.page + 1 : undefined;
+    },
+    initialPageParam: 1,
     enabled: !!repositoryId && !!repositoryUrl,
     refetchInterval: false
+  });
+  
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  
+  // Get repository data from first page
+  const repositoryData = data?.pages[0];
+  // Flatten all commits from all pages
+  const allCommits = data?.pages.flatMap(page => page.commits) || [];
+  
+  console.log('Timeline render:', {
+    hasData: !!data,
+    pagesCount: data?.pages.length,
+    repositoryData: !!repositoryData,
+    allCommitsCount: allCommits.length,
+    isLoading,
+    isError,
+    error: error?.message
   });
 
   // Auto-selection disabled - let user manually select commits
@@ -195,7 +276,7 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
           </p>
         </div>
         
-        <div className="timeline-container bg-background rounded-lg border border-border p-6 flex items-center justify-center h-64">
+        <div className="timeline-container bg-background rounded-lg border border-border p-6 flex items-center justify-center min-h-64">
           <div className="text-center text-muted-foreground">
             <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="text-sm">No repository selected</p>
@@ -206,6 +287,9 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
   }
 
   if (isError) {
+    const isRateLimitError = error?.message?.includes('rate limit');
+    const isTokenTypeError = error?.message?.includes('token type');
+    
     return (
       <div className="bg-card border-b border-border p-6">
         <div className="mb-6">
@@ -213,16 +297,52 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
           <p className="text-sm text-muted-foreground">Failed to load repository data</p>
         </div>
         
-        <div className="timeline-container bg-background rounded-lg border border-border p-6 flex items-center justify-center h-64">
-          <div className="text-center text-destructive">
-            <p className="text-sm">Failed to load timeline data</p>
+        <div className="timeline-container bg-background rounded-lg border border-border p-6 flex items-center justify-center min-h-64">
+          <div className="text-center max-w-2xl">
+            <p className="text-sm text-destructive font-semibold mb-3">
+              {isRateLimitError ? '⚠️ GitHub API Rate Limit Exceeded' : 
+               isTokenTypeError ? '⚠️ Invalid GitHub Token Type' : 
+               'Failed to load timeline data'}
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">{error?.message || 'Unknown error'}</p>
+            
+            {isTokenTypeError && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-left">
+                <p className="text-sm font-semibold text-red-900 dark:text-red-200 mb-2">💡 How to fix this:</p>
+                <ol className="text-xs text-red-800 dark:text-red-300 space-y-2 list-decimal list-inside">
+                  <li>Go to: <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="underline font-semibold">github.com/settings/tokens</a></li>
+                  <li>Click <strong>"Generate new token (classic)"</strong> - NOT fine-grained!</li>
+                  <li>Select the <code className="bg-red-100 dark:bg-red-800 px-1 rounded">public_repo</code> scope</li>
+                  <li>Copy the token and update <code className="bg-red-100 dark:bg-red-800 px-1 rounded">GITHUB_TOKEN</code> in your .env file</li>
+                  <li>Restart your development server</li>
+                </ol>
+                <p className="text-xs text-red-700 dark:text-red-400 mt-3">
+                  <strong>Note:</strong> Some repositories (like Microsoft's) don't support fine-grained tokens and require classic tokens.
+                </p>
+              </div>
+            )}
+            
+            {isRateLimitError && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-left">
+                <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-200 mb-2">💡 How to fix this:</p>
+                <ol className="text-xs text-yellow-800 dark:text-yellow-300 space-y-2 list-decimal list-inside">
+                  <li>Create a GitHub Personal Access Token (PAT) at: <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="underline">github.com/settings/tokens</a></li>
+                  <li>Click "Generate new token (classic)" and select the "public_repo" scope</li>
+                  <li>Add <code className="bg-yellow-100 dark:bg-yellow-800 px-1 rounded">GITHUB_TOKEN</code> to your Vercel environment variables</li>
+                  <li>Redeploy your application</li>
+                </ol>
+                <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-3">
+                  <strong>Note:</strong> Without a token, you're limited to 60 requests/hour. With a token, you get 5000 requests/hour.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
     );
   }
 
-  if (isLoading || !repositoryData || !repositoryData.commits || repositoryData.commits.length === 0) {
+  if (isLoading || !repositoryData || allCommits.length === 0) {
     return (
       <div className="bg-card border-b border-border p-6">
         <div className="mb-6">
@@ -233,7 +353,7 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
         </div>
         
         <div className="timeline-container bg-background rounded-lg border border-border p-6">
-          <div className="flex items-center justify-center h-64 text-muted-foreground">
+          <div className="flex items-center justify-center min-h-64 text-muted-foreground">
             <div className="text-center">
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
               <p className="text-sm">Analyzing repository history...</p>
@@ -244,7 +364,7 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
     );
   }
 
-  const commits = repositoryData.commits;
+  const commits = allCommits;
 
   // Sort commits by date (most recent first)
   const sortedCommits = [...commits].sort((a, b) => 
@@ -351,6 +471,21 @@ export default function Timeline({ repositoryId, repositoryUrl, onEventSelect, s
             );
           })}
         </VerticalTimeline>
+        
+        {/* Infinite scroll trigger */}
+        <div ref={observerTarget} className="h-20 flex items-center justify-center">
+          {isFetchingNextPage && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">Loading more commits...</span>
+            </div>
+          )}
+          {!hasNextPage && commits.length > 0 && (
+            <div className="text-sm text-muted-foreground">
+              🎉 All {commits.length} commits loaded
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Legend */}
